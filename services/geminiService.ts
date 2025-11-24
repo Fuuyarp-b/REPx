@@ -1,14 +1,21 @@
-/// <reference types="vite/client" />
 import { GoogleGenAI } from "@google/genai";
+
+// Declare process to avoid TypeScript errors when accessing process.env.API_KEY
+// This is necessary because we are strictly following the SDK guideline to use process.env.API_KEY
+declare const process: {
+  env: {
+    API_KEY: string | undefined;
+  }
+};
 
 export const getFitnessAdvice = async (query: string): Promise<string> => {
   try {
-    // NOTE: In Vite, we use import.meta.env.VITE_... to access environment variables.
-    // Ensure VITE_API_KEY is set in your Vercel project settings or .env file.
-    const apiKey = import.meta.env.VITE_API_KEY;
+    // NOTE: We access API_KEY via process.env as per @google/genai guidelines.
+    // This variable is injected via vite.config.ts 'define' configuration.
+    const apiKey = process.env.API_KEY;
 
     if (!apiKey) {
-        return "ไม่พบ API Key กรุณาตรวจสอบการตั้งค่า Environment Variable (VITE_API_KEY)";
+        return "ไม่พบ API Key กรุณาตรวจสอบการตั้งค่า Environment Variable (API_KEY)";
     }
 
     const ai = new GoogleGenAI({ apiKey: apiKey });

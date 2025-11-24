@@ -1,4 +1,5 @@
-import { WorkoutSession, Exercise } from './types';
+
+import { Exercise } from './types';
 
 export const createSets = (count: number): any[] => {
   return Array.from({ length: count }, (_, i) => ({

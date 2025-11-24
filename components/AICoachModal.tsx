@@ -1,5 +1,6 @@
+
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Bot, User, Loader2 } from 'lucide-react';
+import { X, Send, Bot, Loader2 } from 'lucide-react';
 import { getFitnessAdvice } from '../services/geminiService';
 import { ChatMessage } from '../types';
 

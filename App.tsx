@@ -1,6 +1,6 @@
 
-import React, { useState, useEffect } from 'react';
-import { Dumbbell, Trophy, MessageCircle, ChevronLeft, Activity, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Dumbbell, Trophy, MessageCircle, ChevronLeft, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings } from 'lucide-react';
 import { WorkoutSession, WorkoutType, Exercise, WorkoutSet } from './types';
 import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES } from './constants';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -690,7 +690,7 @@ const App = () => {
                                     </span>
                                 </div>
                                 <div className="grid grid-cols-4 gap-2">
-                                    {completedSets.map((set, idx) => (
+                                    {completedSets.map((set) => (
                                         <div key={set.id} className="bg-slate-800 p-1.5 rounded text-center border border-slate-700">
                                             <div className="text-[10px] text-slate-500 mb-0.5">Set {set.setNumber}</div>
                                             <div className="text-xs font-mono text-white">

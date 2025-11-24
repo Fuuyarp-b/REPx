@@ -1,14 +1,17 @@
+/// <reference types="vite/client" />
 import { GoogleGenAI } from "@google/genai";
 
 export const getFitnessAdvice = async (query: string): Promise<string> => {
   try {
-    // NOTE: In a real production environment, ensure process.env.API_KEY is set.
-    // For this demo to work, the user must have the key in their environment.
-    if (!process.env.API_KEY) {
-        return "ไม่พบ API Key กรุณาตรวจสอบการตั้งค่า Environment Variable (API_KEY)";
+    // NOTE: In Vite, we use import.meta.env.VITE_... to access environment variables.
+    // Ensure VITE_API_KEY is set in your Vercel project settings or .env file.
+    const apiKey = import.meta.env.VITE_API_KEY;
+
+    if (!apiKey) {
+        return "ไม่พบ API Key กรุณาตรวจสอบการตั้งค่า Environment Variable (VITE_API_KEY)";
     }
 
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey: apiKey });
     
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',

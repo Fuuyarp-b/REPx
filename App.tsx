@@ -1,6 +1,6 @@
 
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Dumbbell, Trophy, MessageCircle, ChevronLeft, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, Camera, Image as ImageIcon, XCircle, Upload } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Dumbbell, Trophy, MessageCircle, ChevronLeft, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save } from 'lucide-react';
 import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile } from './types';
 import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES } from './constants';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -19,15 +19,9 @@ const App = () => {
   const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Login Form State
   const [loginForm, setLoginForm] = useState({ username: '', displayName: '', age: '', weight: '', height: '' });
-  const [loginAvatarFile, setLoginAvatarFile] = useState<File | null>(null);
-  const [loginAvatarPreview, setLoginAvatarPreview] = useState<string | null>(null);
-  const loginAvatarInputRef = useRef<HTMLInputElement>(null);
-  const profileAvatarInputRef = useRef<HTMLInputElement>(null);
 
   // Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -70,13 +64,6 @@ const App = () => {
     }
   }, [activeSession, showSummary, activeTab]);
 
-  // Clean up object URL for avatar preview
-  useEffect(() => {
-    return () => {
-        if (loginAvatarPreview) URL.revokeObjectURL(loginAvatarPreview);
-    };
-  }, [loginAvatarPreview]);
-
   // --- API Functions ---
 
   const fetchUserProfile = async (username: string) => {
@@ -104,7 +91,6 @@ const App = () => {
                  age: data.age || '',
                  weight: data.weight || '',
                  height: data.height || '',
-                 avatarUrl: data.avatar_url
              });
         } else {
             // Profile doesn't exist remotely (maybe first time on new device but skipped creation?)
@@ -146,48 +132,6 @@ const App = () => {
       }
   };
 
-  const uploadAvatar = async (file: File, username: string): Promise<string | null> => {
-      if (!isSupabaseConfigured) return null;
-
-      try {
-          const fileExt = file.name.split('.').pop();
-          const fileName = `${username}/avatar-${Date.now()}.${fileExt}`;
-
-          // Upload to 'avatars' bucket
-          const { error: uploadError } = await supabase.storage
-              .from('avatars')
-              .upload(fileName, file, { upsert: true });
-
-          if (uploadError) {
-              if (uploadError.message.includes("Bucket not found")) {
-                  alert("⚠️ ไม่พบ Bucket 'avatars' ใน Supabase\n\nกรุณาไปที่ Supabase > SQL Editor แล้วรันคำสั่งในไฟล์ 'supabase_setup.sql' เพื่อสร้าง Bucket ครับ");
-                  return null;
-              }
-              throw uploadError;
-          }
-
-          const { data: { publicUrl } } = supabase.storage
-              .from('avatars')
-              .getPublicUrl(fileName);
-          
-          return publicUrl;
-      } catch (error: any) {
-          console.error("Avatar upload error:", error);
-          if (error.message && error.message.includes("row-level security")) {
-              alert("⚠️ อัปโหลดรูปไม่ได้: ติดสิทธิ์ RLS\nกรุณารันไฟล์ 'supabase_setup.sql' ใน Supabase SQL Editor");
-          }
-          return null;
-      }
-  };
-
-  const handleLoginAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files[0]) {
-          const file = e.target.files[0];
-          setLoginAvatarFile(file);
-          setLoginAvatarPreview(URL.createObjectURL(file));
-      }
-  };
-
   const handleLogin = async () => {
       if (!loginForm.username.trim()) return;
       
@@ -202,7 +146,6 @@ const App = () => {
               age: loginForm.age,
               weight: loginForm.weight,
               height: loginForm.height,
-              avatarUrl: loginAvatarPreview || undefined // Use local preview as temporary avatar
           };
           localStorage.setItem('repx_username', username);
           setUserProfile(newProfile);
@@ -211,14 +154,6 @@ const App = () => {
       }
 
       try {
-          let avatarUrl: string | undefined = undefined;
-
-          // Upload avatar if selected
-          if (loginAvatarFile) {
-              const uploadedUrl = await uploadAvatar(loginAvatarFile, username);
-              if (uploadedUrl) avatarUrl = uploadedUrl;
-          }
-
           // 1. Check if user exists
           const { data: existingUser } = await supabase
               .from('profiles')
@@ -234,11 +169,10 @@ const App = () => {
                  age: loginForm.age || existingUser.age,
                  weight: loginForm.weight || existingUser.weight,
                  height: loginForm.height || existingUser.height,
-                 avatar_url: avatarUrl || existingUser.avatar_url
               };
               
               // Only update DB if we have new info provided in login form (optional logic)
-              if (loginForm.displayName || loginAvatarFile || loginForm.age) {
+              if (loginForm.displayName || loginForm.age) {
                   await supabase.from('profiles').upsert(updatedProfile);
               }
 
@@ -248,7 +182,6 @@ const App = () => {
                  age: updatedProfile.age || '',
                  weight: updatedProfile.weight || '',
                  height: updatedProfile.height || '',
-                 avatarUrl: updatedProfile.avatar_url
              });
           } else {
               // Create new user
@@ -258,7 +191,6 @@ const App = () => {
                   age: loginForm.age,
                   weight: loginForm.weight,
                   height: loginForm.height,
-                  avatar_url: avatarUrl
               };
 
               const { error } = await supabase
@@ -273,7 +205,6 @@ const App = () => {
                   age: newProfile.age,
                   weight: newProfile.weight,
                   height: newProfile.height,
-                  avatarUrl: newProfile.avatar_url
               });
           }
           
@@ -291,17 +222,10 @@ const App = () => {
       }
   };
 
-  const handleUpdateProfile = async (newAvatarFile?: File) => {
+  const handleUpdateProfile = async () => {
       if (!userProfile) return;
       
       try {
-          let newAvatarUrl = userProfile.avatarUrl;
-
-          if (newAvatarFile && isSupabaseConfigured) {
-              const url = await uploadAvatar(newAvatarFile, userProfile.username);
-              if (url) newAvatarUrl = url;
-          }
-
           if (isSupabaseConfigured) {
               const { error } = await supabase
                 .from('profiles')
@@ -311,24 +235,14 @@ const App = () => {
                     age: userProfile.age,
                     weight: userProfile.weight,
                     height: userProfile.height,
-                    avatar_url: newAvatarUrl
                 });
               if (error) throw error;
           }
           
-          setUserProfile(prev => prev ? { ...prev, avatarUrl: newAvatarUrl } : null);
           alert('บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว');
       } catch (error: any) {
            console.error("Update profile error:", error);
            alert('ไม่สามารถบันทึกข้อมูลได้: ' + error.message);
-      }
-  };
-
-  const handleProfileAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.files && e.target.files[0]) {
-          const file = e.target.files[0];
-          // Trigger immediate upload and update
-          handleUpdateProfile(file);
       }
   };
 
@@ -345,64 +259,10 @@ const App = () => {
               setHistory([]);
               setActiveSession(null);
               setActiveTab('workout');
-              setLoginAvatarFile(null);
-              setLoginAvatarPreview(null);
               setLoginForm({ username: '', displayName: '', age: '', weight: '', height: '' });
               setConfirmModal(prev => ({ ...prev, isOpen: false }));
           }
       });
-  };
-
-  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0 || !activeSession || !userProfile) return;
-    
-    if (!isSupabaseConfigured) {
-        alert("กรุณาเชื่อมต่อ Supabase เพื่อใช้งานฟีเจอร์อัปโหลดรูปภาพ");
-        return;
-    }
-
-    const file = event.target.files[0];
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${userProfile.username}/${activeSession.id}-${Date.now()}.${fileExt}`;
-    
-    setIsUploading(true);
-
-    try {
-        // 1. Upload to Supabase Storage (Bucket: 'workouts')
-        const { error: uploadError } = await supabase.storage
-            .from('workouts')
-            .upload(fileName, file, { upsert: true });
-
-        if (uploadError) {
-            // Check if bucket doesn't exist or permissions issue
-            if (uploadError.message.includes("Bucket not found")) {
-                throw new Error("⚠️ ไม่พบ Bucket ชื่อ 'workouts' ใน Supabase\n\nกรุณาไปที่ Supabase > SQL Editor แล้วรันคำสั่งในไฟล์ 'supabase_setup.sql' เพื่อสร้าง Bucket ครับ");
-            }
-            throw uploadError;
-        }
-
-        // 2. Get Public URL
-        const { data: { publicUrl } } = supabase.storage
-            .from('workouts')
-            .getPublicUrl(fileName);
-
-        // 3. Update active session state
-        setActiveSession({ ...activeSession, imageUrl: publicUrl });
-
-    } catch (error: any) {
-        console.error("Upload error:", error);
-        alert(`${error.message}`);
-    } finally {
-        setIsUploading(false);
-        // Reset input value to allow re-selecting same file
-        if (fileInputRef.current) fileInputRef.current.value = '';
-    }
-  };
-
-  const removeImage = () => {
-      if (!activeSession) return;
-      // Note: We don't delete from Storage immediately to keep it simple, just remove ref
-      setActiveSession({ ...activeSession, imageUrl: undefined });
   };
 
   // --- Actions ---
@@ -729,11 +589,7 @@ const App = () => {
             onClick={() => setActiveTab('profile')}
             className={`flex flex-col items-center p-2 rounded-xl w-full transition-colors ${activeTab === 'profile' ? 'text-purple-400 bg-slate-800' : 'text-slate-500 hover:text-slate-300'}`}
           >
-            {userProfile?.avatarUrl ? (
-                <img src={userProfile.avatarUrl} alt="Profile" className="w-6 h-6 rounded-full object-cover border border-slate-600" />
-            ) : (
-                <User size={24} />
-            )}
+            <User size={24} />
             <span className="text-xs mt-1">โปรไฟล์</span>
           </button>
         </div>
@@ -749,29 +605,6 @@ const App = () => {
                     REPx
                   </h1>
                   <p className="text-slate-400">เข้าสู่ระบบเพื่อเริ่มบันทึกการฝึกซ้อม</p>
-              </div>
-
-              {/* Avatar Upload */}
-              <div className="flex justify-center mb-6">
-                  <div className="relative group cursor-pointer" onClick={() => loginAvatarInputRef.current?.click()}>
-                      <div className="w-24 h-24 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center overflow-hidden shadow-xl">
-                          {loginAvatarPreview ? (
-                              <img src={loginAvatarPreview} alt="Preview" className="w-full h-full object-cover" />
-                          ) : (
-                              <User size={40} className="text-slate-500" />
-                          )}
-                      </div>
-                      <div className="absolute bottom-0 right-0 bg-blue-600 p-2 rounded-full border-2 border-slate-900 shadow-lg group-hover:bg-blue-500 transition-colors">
-                          <Camera size={16} className="text-white" />
-                      </div>
-                      <input 
-                          type="file" 
-                          ref={loginAvatarInputRef}
-                          onChange={handleLoginAvatarChange}
-                          accept="image/*"
-                          className="hidden"
-                      />
-                  </div>
               </div>
 
               <div className="space-y-4">
@@ -840,7 +673,7 @@ const App = () => {
               {!isSupabaseConfigured && (
                   <div className="mt-6 p-3 bg-amber-900/20 border border-amber-900/30 rounded-lg flex items-start gap-2">
                       <AlertTriangle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
-                      <p className="text-xs text-amber-200/70">ไม่ได้เชื่อมต่อ Database: รูปโปรไฟล์และข้อมูลจะถูกบันทึกเฉพาะในเครื่องนี้เท่านั้น</p>
+                      <p className="text-xs text-amber-200/70">ไม่ได้เชื่อมต่อ Database: ข้อมูลจะถูกบันทึกเฉพาะในเครื่องนี้เท่านั้น</p>
                   </div>
               )}
           </div>
@@ -863,36 +696,10 @@ const App = () => {
             <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-lg mb-6 text-center relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-purple-900/30 to-transparent"></div>
                 
-                {/* Profile Picture with Edit Overlay */}
-                <div 
-                    className="w-24 h-24 rounded-full bg-slate-700 border-4 border-slate-800 mx-auto mb-4 flex items-center justify-center relative z-10 shadow-xl overflow-hidden group cursor-pointer"
-                    onClick={() => profileAvatarInputRef.current?.click()}
-                >
-                    {userProfile.avatarUrl ? (
-                         <img 
-                            src={userProfile.avatarUrl} 
-                            alt="Profile" 
-                            className="w-full h-full object-cover"
-                            onError={(e) => {
-                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${userProfile.displayName}&background=0D8ABC&color=fff`;
-                            }}
-                         />
-                    ) : (
-                        <User size={48} className="text-slate-400" />
-                    )}
-                    
-                    {/* Hover Overlay */}
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Upload size={24} className="text-white" />
-                    </div>
+                {/* Profile Picture Placeholder */}
+                <div className="w-24 h-24 rounded-full bg-slate-700 border-4 border-slate-800 mx-auto mb-4 flex items-center justify-center relative z-10 shadow-xl overflow-hidden">
+                    <User size={48} className="text-slate-400" />
                 </div>
-                <input 
-                    type="file" 
-                    ref={profileAvatarInputRef}
-                    onChange={handleProfileAvatarChange}
-                    accept="image/*"
-                    className="hidden"
-                />
 
                 <h2 className="text-2xl font-bold text-white relative z-10">{userProfile.displayName}</h2>
                 <p className="text-slate-500 text-sm relative z-10">@{userProfile.username}</p>
@@ -1164,12 +971,6 @@ const App = () => {
                                   <span className="flex items-center gap-1"><CalendarClock size={10} /> {session.date}</span>
                                   <span>•</span>
                                   <span className="flex items-center gap-1"><Timer size={10} /> {formatDuration(session.startTime, session.endTime)}</span>
-                                  {session.imageUrl && (
-                                     <>
-                                        <span>•</span>
-                                        <span className="flex items-center gap-1 text-blue-400"><ImageIcon size={10} /> มีรูปภาพ</span>
-                                     </>
-                                  )}
                               </div>
                           </div>
                           
@@ -1215,11 +1016,7 @@ const App = () => {
             <p className="text-slate-400 text-xs mt-1">Ready for the pump, <span className="text-white font-bold">{userProfile?.displayName}</span>?</p>
           </div>
           <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
-             {userProfile?.avatarUrl ? (
-                 <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-             ) : (
-                <User size={20} className="text-slate-400" />
-             )}
+             <User size={20} className="text-slate-400" />
           </div>
       </div>
 
@@ -1331,61 +1128,15 @@ const App = () => {
             ))}
             
             {/* Add Exercise Button */}
-            <div className="grid grid-cols-2 gap-3 mt-4">
+            <div className="mt-4">
                 <button 
                     onClick={addExercise}
-                    className="py-4 border-2 border-dashed border-slate-700 rounded-xl text-slate-400 hover:text-white hover:border-blue-500 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 active:scale-95"
+                    className="w-full py-4 border-2 border-dashed border-slate-700 rounded-xl text-slate-400 hover:text-white hover:border-blue-500 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 active:scale-95"
                 >
                     <Plus size={20} />
                     <span className="font-medium">เพิ่มท่า</span>
                 </button>
-
-                <div className="relative">
-                    <input 
-                        type="file" 
-                        accept="image/*" 
-                        ref={fileInputRef}
-                        className="hidden" 
-                        onChange={handleImageUpload}
-                    />
-                    <button 
-                        onClick={() => fileInputRef.current?.click()}
-                        disabled={isUploading}
-                        className={`w-full h-full py-4 border-2 border-dashed border-slate-700 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 ${
-                            isUploading ? 'bg-slate-800 cursor-wait' : 'hover:border-purple-500 hover:bg-slate-800 text-slate-400 hover:text-purple-400'
-                        }`}
-                    >
-                         {isUploading ? (
-                             <Loader2 size={20} className="animate-spin text-purple-500" />
-                         ) : (
-                             <>
-                                <Camera size={20} />
-                                <span className="font-medium">ถ่ายรูป</span>
-                             </>
-                         )}
-                    </button>
-                </div>
             </div>
-
-            {/* Image Preview Area */}
-            {activeSession.imageUrl && (
-                <div className="mt-4 relative group rounded-xl overflow-hidden border border-slate-700">
-                    <img 
-                        src={activeSession.imageUrl} 
-                        alt="Session Preview" 
-                        className="w-full h-48 object-cover"
-                    />
-                    <button 
-                        onClick={removeImage}
-                        className="absolute top-2 right-2 bg-red-600/80 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                    >
-                        <XCircle size={20} />
-                    </button>
-                    <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-xs text-white backdrop-blur-sm">
-                        📸 รูปประจำวัน
-                    </div>
-                </div>
-            )}
         </div>
 
         {/* Bottom Action */}
@@ -1433,24 +1184,6 @@ const App = () => {
                         <p className="text-lg font-bold text-blue-400">{durationText}</p>
                     </div>
                 </div>
-
-                {/* Photo in Summary */}
-                {activeSession.imageUrl && (
-                    <div className="mb-4 flex-shrink-0">
-                        <div className="rounded-xl overflow-hidden border border-slate-700 shadow-lg relative h-32">
-                             <img 
-                                src={activeSession.imageUrl} 
-                                alt="Workout Summary" 
-                                className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-2">
-                                <p className="text-white text-xs font-medium flex items-center gap-1">
-                                    <ImageIcon size={12} /> ความทรงจำวันนี้
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                )}
                 
                 {/* Detailed Breakdown List */}
                 <div className="flex-1 overflow-y-auto pr-1 mb-4 space-y-3 custom-scrollbar">

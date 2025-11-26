@@ -30,7 +30,6 @@ export interface WorkoutSession {
   endTime?: number;
   exercises: Exercise[];
   status: 'active' | 'completed';
-  imageUrl?: string; // New field for photo
 }
 
 export interface ChatMessage {
@@ -45,5 +44,4 @@ export interface UserProfile {
   age: string;
   weight: string;
   height: string;
-  avatarUrl?: string;
 }

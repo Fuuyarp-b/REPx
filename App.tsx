@@ -1,11 +1,12 @@
 
-import { useState, useEffect } from 'react';
-import { Dumbbell, Trophy, MessageCircle, ChevronLeft, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Dumbbell, Trophy, MessageCircle, ChevronLeft, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle } from 'lucide-react';
 import { WorkoutSession, WorkoutType, Exercise, WorkoutSet } from './types';
 import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES } from './constants';
 import { ExerciseCard } from './components/ExerciseCard';
 import { AICoachModal } from './components/AICoachModal';
 import { ConfirmModal } from './components/ConfirmModal';
+import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
 
 const App = () => {
   // State
@@ -15,6 +16,8 @@ const App = () => {
   const [showSummary, setShowSummary] = useState(false);
   const [activeTab, setActiveTab] = useState<'workout' | 'dashboard'>('workout');
   const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
+  const [userId, setUserId] = useState<string>('');
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   
   // Modal State
   const [confirmModal, setConfirmModal] = useState({
@@ -25,24 +28,53 @@ const App = () => {
     isDangerous: false
   });
 
-  // Load history from local storage on mount
+  // Initialize User and Load History
   useEffect(() => {
-    const savedHistory = localStorage.getItem('workout_history');
-    if (savedHistory) {
-      try {
-        setHistory(JSON.parse(savedHistory));
-      } catch (e) {
-        console.error("Failed to parse history", e);
-      }
+    // 1. Setup User Identity
+    let currentUserId = localStorage.getItem('repx_user_id');
+    if (!currentUserId) {
+      currentUserId = crypto.randomUUID();
+      localStorage.setItem('repx_user_id', currentUserId);
     }
-    // Randomize quote on initial load
+    setUserId(currentUserId);
+
+    // 2. Load History from Supabase
+    const fetchHistory = async () => {
+      if (!currentUserId) return;
+      
+      // Prevent fetching if Supabase is not configured (avoids unnecessary errors)
+      if (!isSupabaseConfigured) {
+        setIsLoadingHistory(false);
+        return;
+      }
+
+      setIsLoadingHistory(true);
+      try {
+        const { data, error } = await supabase
+          .from('workouts')
+          .select('*')
+          .eq('user_id', currentUserId)
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+
+        if (data) {
+          const parsedHistory = data.map(item => item.data as WorkoutSession);
+          setHistory(parsedHistory);
+        }
+      } catch (error: any) {
+        // Detailed error logging to fix [object Object] issue
+        console.error('Error fetching history:', error.message || JSON.stringify(error));
+      } finally {
+        setIsLoadingHistory(false);
+      }
+    };
+
+    fetchHistory();
+
+    // 3. Randomize quote
     setQuote(MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]);
   }, []);
-
-  // Save history whenever it changes
-  useEffect(() => {
-    localStorage.setItem('workout_history', JSON.stringify(history));
-  }, [history]);
 
   // Randomize quote when returning to selection screen
   useEffect(() => {
@@ -179,8 +211,8 @@ const App = () => {
     setShowSummary(false);
   };
 
-  // Phase 3: Confirm and Save
-  const saveWorkout = () => {
+  // Phase 3: Confirm and Save (Sync to Supabase)
+  const saveWorkout = async () => {
     if (!activeSession) return;
     
     // Ensure we have an end time
@@ -191,20 +223,38 @@ const App = () => {
         status: 'completed', 
         endTime 
     };
-    
+
+    // Optimistic Update (Update UI immediately)
     setHistory(prev => {
-        // Check if this session ID already exists in history (Edit mode)
         const exists = prev.some(s => s.id === completedSession.id);
         if (exists) {
             return prev.map(s => s.id === completedSession.id ? completedSession : s);
         }
-        // New session
         return [completedSession, ...prev];
     });
 
     setActiveSession(null);
     setShowSummary(false);
     setActiveTab('dashboard');
+
+    // Sync to Supabase
+    if (isSupabaseConfigured) {
+      try {
+          const { error } = await supabase
+              .from('workouts')
+              .upsert({
+                  id: completedSession.id,
+                  user_id: userId,
+                  data: completedSession,
+                  created_at: new Date(endTime).toISOString()
+              });
+          
+          if (error) throw error;
+      } catch (error: any) {
+          console.error("Failed to save workout to Supabase:", error.message || error);
+          alert(`ไม่สามารถบันทึกข้อมูลออนไลน์ได้: ${error.message || 'Unknown Error'}`);
+      }
+    }
   };
 
   const editHistoryItem = (id: string) => {
@@ -222,12 +272,26 @@ const App = () => {
       title: 'รีเซ็ตข้อมูลทั้งหมด',
       message: 'คุณแน่ใจหรือไม่ว่าต้องการลบประวัติการฝึกซ้อมทั้งหมดและเริ่มต้นใหม่? การกระทำนี้ไม่สามารถย้อนกลับได้',
       isDangerous: true,
-      onConfirm: () => {
+      onConfirm: async () => {
+        // Optimistic UI update
         setHistory([]);
         setActiveSession(null);
         setActiveTab('workout');
-        localStorage.removeItem('workout_history');
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
+
+        // Delete from Supabase
+        if (isSupabaseConfigured) {
+          try {
+              const { error } = await supabase
+                  .from('workouts')
+                  .delete()
+                  .eq('user_id', userId);
+              
+              if (error) throw error;
+          } catch (error: any) {
+              console.error("Failed to clear history from Supabase:", error.message || error);
+          }
+        }
       }
     });
   };
@@ -238,9 +302,24 @@ const App = () => {
       title: 'ลบรายการ',
       message: 'คุณต้องการลบรายการบันทึกนี้ใช่หรือไม่?',
       isDangerous: true,
-      onConfirm: () => {
+      onConfirm: async () => {
+        // Optimistic UI update
         setHistory(prev => prev.filter(item => item.id !== id));
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
+
+        // Delete from Supabase
+        if (isSupabaseConfigured) {
+          try {
+              const { error } = await supabase
+                  .from('workouts')
+                  .delete()
+                  .eq('id', id);
+              
+              if (error) throw error;
+          } catch (error: any) {
+              console.error("Failed to delete item from Supabase:", error.message || error);
+          }
+        }
       }
     });
   };
@@ -258,7 +337,7 @@ const App = () => {
     return `${minutes} นาที`;
   };
 
-  const calculateVolume = (session: WorkoutSession) => {
+  const calculateVolume = useCallback((session: WorkoutSession) => {
     return session.exercises.reduce((total, ex) => {
         return total + ex.sets.reduce((subTotal, set) => {
             if (set.completed && typeof set.weight === 'number' && typeof set.reps === 'number') {
@@ -267,7 +346,7 @@ const App = () => {
             return subTotal;
         }, 0);
     }, 0);
-  };
+  }, []);
 
   // --- Renders ---
 
@@ -330,7 +409,25 @@ const App = () => {
           )}
         </div>
 
-        {history.length === 0 ? (
+        {/* Missing Config Warning */}
+        {!isSupabaseConfigured && (
+          <div className="mb-6 p-4 bg-amber-900/20 border border-amber-900/50 rounded-xl flex gap-3 items-start">
+            <AlertTriangle className="text-amber-500 flex-shrink-0 mt-0.5" size={20} />
+            <div>
+              <h3 className="font-bold text-amber-400 text-sm mb-1">ไม่ได้เชื่อมต่อ Database</h3>
+              <p className="text-xs text-amber-200/70 leading-relaxed">
+                ข้อมูลของคุณจะถูกบันทึกชั่วคราวเท่านั้น กรุณาตั้งค่า Environment Variables (VITE_SUPABASE_URL) ใน Vercel Dashboard
+              </p>
+            </div>
+          </div>
+        )}
+
+        {isLoadingHistory ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500">
+            <Loader2 size={48} className="animate-spin mb-4 text-blue-500" />
+            <p>กำลังโหลดข้อมูล...</p>
+          </div>
+        ) : history.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-500 border-2 border-dashed border-slate-800 rounded-2xl bg-slate-900/30">
               <HistoryIcon size={48} className="mb-4 opacity-50 text-blue-500" />
               <p className="text-lg font-medium text-slate-300">ยังไม่มีข้อมูล</p>
@@ -375,7 +472,7 @@ const App = () => {
                   <div className="h-40 flex items-end justify-between gap-2 px-1">
                       {last7Sessions.map((session, index) => {
                           const vol = calculateVolume(session);
-                          const heightPct = (vol / maxVol) * 100;
+                          const heightPct = maxVol > 0 ? (vol / maxVol) * 100 : 0;
                           const colorClass = 
                             session.type === 'Push' ? 'bg-red-500' : 
                             session.type === 'Pull' ? 'bg-blue-500' : 

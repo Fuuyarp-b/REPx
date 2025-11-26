@@ -160,7 +160,7 @@ const App = () => {
 
           if (uploadError) {
               if (uploadError.message.includes("Bucket not found")) {
-                  console.warn("Bucket 'avatars' not found. Please create it in Supabase.");
+                  alert("⚠️ ไม่พบ Bucket 'avatars' ใน Supabase\n\nกรุณาไปที่ Supabase > SQL Editor แล้วรันคำสั่งในไฟล์ 'supabase_setup.sql' เพื่อสร้าง Bucket ครับ");
                   return null;
               }
               throw uploadError;
@@ -171,8 +171,11 @@ const App = () => {
               .getPublicUrl(fileName);
           
           return publicUrl;
-      } catch (error) {
+      } catch (error: any) {
           console.error("Avatar upload error:", error);
+          if (error.message && error.message.includes("row-level security")) {
+              alert("⚠️ อัปโหลดรูปไม่ได้: ติดสิทธิ์ RLS\nกรุณารันไฟล์ 'supabase_setup.sql' ใน Supabase SQL Editor");
+          }
           return null;
       }
   };
@@ -279,7 +282,7 @@ const App = () => {
       } catch (error: any) {
           console.error("Login error:", error);
           if (error.message?.includes('row-level security')) {
-              alert('⚠️ กรุณาปิด RLS ในตาราง profiles ที่ Supabase ก่อนใช้งาน');
+              alert('⚠️ กรุณาปิด RLS ในตาราง profiles โดยรันไฟล์ supabase_setup.sql ใน Supabase');
           } else {
               alert('เกิดข้อผิดพลาดในการเข้าสู่ระบบ: ' + error.message);
           }
@@ -373,7 +376,7 @@ const App = () => {
         if (uploadError) {
             // Check if bucket doesn't exist or permissions issue
             if (uploadError.message.includes("Bucket not found")) {
-                throw new Error("ไม่พบ Bucket ชื่อ 'workouts' กรุณาสร้างใน Supabase Dashboard");
+                throw new Error("⚠️ ไม่พบ Bucket ชื่อ 'workouts' ใน Supabase\n\nกรุณาไปที่ Supabase > SQL Editor แล้วรันคำสั่งในไฟล์ 'supabase_setup.sql' เพื่อสร้าง Bucket ครับ");
             }
             throw uploadError;
         }
@@ -388,7 +391,7 @@ const App = () => {
 
     } catch (error: any) {
         console.error("Upload error:", error);
-        alert(`อัปโหลดรูปภาพไม่สำเร็จ: ${error.message}`);
+        alert(`${error.message}`);
     } finally {
         setIsUploading(false);
         // Reset input value to allow re-selecting same file
@@ -573,7 +576,7 @@ const App = () => {
           console.error("Failed to save workout to Supabase:", msg);
           
           if (msg.includes('row-level security')) {
-              alert('⚠️ บันทึกไม่ได้: ติดสิทธิ์ความปลอดภัย (RLS)\n\nกรุณาไปที่ Supabase > SQL Editor แล้วรันคำสั่ง:\nALTER TABLE workouts DISABLE ROW LEVEL SECURITY;');
+              alert('⚠️ บันทึกไม่ได้: ติดสิทธิ์ความปลอดภัย (RLS)\n\nกรุณาไปที่ Supabase > SQL Editor แล้วรันคำสั่งในไฟล์ supabase_setup.sql');
           } else {
               alert(`ไม่สามารถบันทึกข้อมูลออนไลน์ได้: ${msg}`);
           }
@@ -616,7 +619,7 @@ const App = () => {
               const msg = error.message || 'Unknown Error';
               console.error("Failed to clear history from Supabase:", msg);
               if (msg.includes('row-level security')) {
-                  alert('⚠️ ลบข้อมูลไม่ได้: ติดสิทธิ์ RLS กรุณาปิด RLS ใน Supabase');
+                  alert('⚠️ ลบข้อมูลไม่ได้: ติดสิทธิ์ RLS กรุณารันไฟล์ supabase_setup.sql');
               }
           }
         }
@@ -648,7 +651,7 @@ const App = () => {
               const msg = error.message || 'Unknown Error';
               console.error("Failed to delete item from Supabase:", msg);
               if (msg.includes('row-level security')) {
-                   alert('⚠️ ลบข้อมูลไม่ได้: ติดสิทธิ์ RLS กรุณาปิด RLS ใน Supabase');
+                   alert('⚠️ ลบข้อมูลไม่ได้: ติดสิทธิ์ RLS กรุณารันไฟล์ supabase_setup.sql');
               }
           }
         }
@@ -866,7 +869,14 @@ const App = () => {
                     onClick={() => profileAvatarInputRef.current?.click()}
                 >
                     {userProfile.avatarUrl ? (
-                         <img src={userProfile.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                         <img 
+                            src={userProfile.avatarUrl} 
+                            alt="Profile" 
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                                (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${userProfile.displayName}&background=0D8ABC&color=fff`;
+                            }}
+                         />
                     ) : (
                         <User size={48} className="text-slate-400" />
                     )}

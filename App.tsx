@@ -1,6 +1,6 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Filter, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Check } from 'lucide-react';
 import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile } from './types';
 import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES, PRESET_AVATARS } from './constants';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -68,7 +68,7 @@ const App = () => {
   const fetchUserProfile = async (username: string) => {
       if (!isSupabaseConfigured) return;
       try {
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('profiles')
             .select('*')
             .eq('username', username)
@@ -472,11 +472,6 @@ const App = () => {
       return history.filter(session => {
           if (!session.endTime && !session.date) return false;
           
-          // Parse date "D/M/YYYY" to Date object
-          const parts = session.date.split('/');
-          const sessionDate = new Date(parseInt(parts[2]) - 543, parseInt(parts[1]) - 1, parseInt(parts[0])); // Handle Thai Year if needed, but assuming standard format or simple parsing
-          // Note: toLocaleDateString('th-TH') gives Buddhist year usually. Let's handle generic case or timestamp if available.
-          // Better to use session.startTime if available
           const compareDate = session.startTime ? new Date(session.startTime) : new Date(); // Fallback
 
           const diffTime = Math.abs(now.getTime() - compareDate.getTime());
@@ -871,10 +866,6 @@ const App = () => {
     const legsCount = filteredHistory.filter(s => s.type === 'Legs').length;
     const customCount = filteredHistory.filter(s => s.type === 'Custom').length;
 
-    // Calculate max volume for chart scaling
-    const volumes = filteredHistory.slice(0, 7).map(s => calculateTotalVolume(s.exercises)).reverse();
-    const maxVol = Math.max(...volumes, 1);
-
     return (
       <div className="p-4 pb-24 max-w-md mx-auto animate-in fade-in duration-500">
         <div className="flex justify-between items-center mb-6">
@@ -1113,20 +1104,18 @@ const App = () => {
           </div>
       )}
 
-      <AICoachModal 
-        isOpen={isCoachOpen} 
-        onClose={() => setIsCoachOpen(false)} 
-      />
-
+      {/* Modals */}
+      <AICoachModal isOpen={isCoachOpen} onClose={() => setIsCoachOpen(false)} />
+      
       <ConfirmModal 
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
         message={confirmModal.message}
-        onClose={() => setConfirmModal(prev => ({...prev, isOpen: false}))}
         onConfirm={confirmModal.onConfirm}
-        isDangerous={confirmModal.isDangerous}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
         confirmText={confirmModal.confirmText}
         cancelText={confirmModal.cancelText}
+        isDangerous={confirmModal.isDangerous}
       />
     </div>
   );

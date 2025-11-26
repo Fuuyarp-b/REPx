@@ -1,7 +1,7 @@
 
-import { useState, useEffect, useCallback } from 'react';
-import { Dumbbell, Trophy, MessageCircle, ChevronLeft, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle } from 'lucide-react';
-import { WorkoutSession, WorkoutType, Exercise, WorkoutSet } from './types';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { Dumbbell, Trophy, MessageCircle, ChevronLeft, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, Camera, Image as ImageIcon, XCircle, Upload } from 'lucide-react';
+import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile } from './types';
 import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES } from './constants';
 import { ExerciseCard } from './components/ExerciseCard';
 import { AICoachModal } from './components/AICoachModal';
@@ -10,17 +10,35 @@ import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
 
 const App = () => {
   // State
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
   const [history, setHistory] = useState<WorkoutSession[]>([]);
   const [isCoachOpen, setIsCoachOpen] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
-  const [activeTab, setActiveTab] = useState<'workout' | 'dashboard'>('workout');
+  const [activeTab, setActiveTab] = useState<'workout' | 'dashboard' | 'profile'>('workout');
   const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
-  const [userId, setUserId] = useState<string>('');
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
+  // Login Form State
+  const [loginForm, setLoginForm] = useState({ username: '', displayName: '', age: '', weight: '', height: '' });
+  const [loginAvatarFile, setLoginAvatarFile] = useState<File | null>(null);
+  const [loginAvatarPreview, setLoginAvatarPreview] = useState<string | null>(null);
+  const loginAvatarInputRef = useRef<HTMLInputElement>(null);
+  const profileAvatarInputRef = useRef<HTMLInputElement>(null);
+
   // Modal State
-  const [confirmModal, setConfirmModal] = useState({
+  const [confirmModal, setConfirmModal] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+    isDangerous: boolean;
+    confirmText?: string;
+    cancelText?: string;
+  }>({
     isOpen: false,
     title: '',
     message: '',
@@ -28,20 +46,78 @@ const App = () => {
     isDangerous: false
   });
 
-  // Initialize User and Load History
+  // Initialize - Check for local session
   useEffect(() => {
-    // 1. Setup User Identity
-    let currentUserId = localStorage.getItem('repx_user_id');
-    if (!currentUserId) {
-      currentUserId = crypto.randomUUID();
-      localStorage.setItem('repx_user_id', currentUserId);
+    const savedUsername = localStorage.getItem('repx_username');
+    if (savedUsername) {
+       // Attempt to restore session immediately if username exists locally
+       fetchUserProfile(savedUsername);
     }
-    setUserId(currentUserId);
+  }, []);
 
-    // 2. Load History from Supabase
-    const fetchHistory = async () => {
-      if (!currentUserId) return;
-      
+  // Fetch History when profile is set
+  useEffect(() => {
+    if (userProfile) {
+        fetchHistory(userProfile.username);
+    }
+  }, [userProfile]);
+
+  // Randomize quote when returning to selection screen
+  useEffect(() => {
+    if (!activeSession && !showSummary && activeTab === 'workout') {
+      const randomIndex = Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length);
+      setQuote(MOTIVATIONAL_QUOTES[randomIndex]);
+    }
+  }, [activeSession, showSummary, activeTab]);
+
+  // Clean up object URL for avatar preview
+  useEffect(() => {
+    return () => {
+        if (loginAvatarPreview) URL.revokeObjectURL(loginAvatarPreview);
+    };
+  }, [loginAvatarPreview]);
+
+  // --- API Functions ---
+
+  const fetchUserProfile = async (username: string) => {
+    if (!isSupabaseConfigured) {
+        // Fallback for offline/no-db mode
+        setUserProfile({ username, displayName: username, age: '', weight: '', height: '' });
+        return;
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('username', username)
+            .single();
+
+        if (error && error.code !== 'PGRST116') { // PGRST116 is "Row not found"
+             console.error("Error fetching profile:", error);
+        }
+
+        if (data) {
+             setUserProfile({
+                 username: data.username,
+                 displayName: data.display_name,
+                 age: data.age || '',
+                 weight: data.weight || '',
+                 height: data.height || '',
+                 avatarUrl: data.avatar_url
+             });
+        } else {
+            // Profile doesn't exist remotely (maybe first time on new device but skipped creation?)
+            // We just treat it as a new session locally for now
+             setUserProfile({ username, displayName: username, age: '', weight: '', height: '' });
+        }
+    } catch (err) {
+        console.error("Profile fetch error:", err);
+        setUserProfile({ username, displayName: username, age: '', weight: '', height: '' });
+    }
+  };
+
+  const fetchHistory = async (username: string) => {
       // Prevent fetching if Supabase is not configured (avoids unnecessary errors)
       if (!isSupabaseConfigured) {
         setIsLoadingHistory(false);
@@ -53,7 +129,7 @@ const App = () => {
         const { data, error } = await supabase
           .from('workouts')
           .select('*')
-          .eq('user_id', currentUserId)
+          .eq('user_id', username) // Use username as user_id
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -68,21 +144,263 @@ const App = () => {
       } finally {
         setIsLoadingHistory(false);
       }
-    };
+  };
 
-    fetchHistory();
+  const uploadAvatar = async (file: File, username: string): Promise<string | null> => {
+      if (!isSupabaseConfigured) return null;
 
-    // 3. Randomize quote
-    setQuote(MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]);
-  }, []);
+      try {
+          const fileExt = file.name.split('.').pop();
+          const fileName = `${username}/avatar-${Date.now()}.${fileExt}`;
 
-  // Randomize quote when returning to selection screen
-  useEffect(() => {
-    if (!activeSession && !showSummary && activeTab === 'workout') {
-      const randomIndex = Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length);
-      setQuote(MOTIVATIONAL_QUOTES[randomIndex]);
+          // Upload to 'avatars' bucket
+          const { error: uploadError } = await supabase.storage
+              .from('avatars')
+              .upload(fileName, file, { upsert: true });
+
+          if (uploadError) {
+              if (uploadError.message.includes("Bucket not found")) {
+                  console.warn("Bucket 'avatars' not found. Please create it in Supabase.");
+                  return null;
+              }
+              throw uploadError;
+          }
+
+          const { data: { publicUrl } } = supabase.storage
+              .from('avatars')
+              .getPublicUrl(fileName);
+          
+          return publicUrl;
+      } catch (error) {
+          console.error("Avatar upload error:", error);
+          return null;
+      }
+  };
+
+  const handleLoginAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+          const file = e.target.files[0];
+          setLoginAvatarFile(file);
+          setLoginAvatarPreview(URL.createObjectURL(file));
+      }
+  };
+
+  const handleLogin = async () => {
+      if (!loginForm.username.trim()) return;
+      
+      setIsLoggingIn(true);
+      const username = loginForm.username.trim().toLowerCase();
+      
+      if (!isSupabaseConfigured) {
+          // Offline mode login
+          const newProfile: UserProfile = {
+              username,
+              displayName: loginForm.displayName || username,
+              age: loginForm.age,
+              weight: loginForm.weight,
+              height: loginForm.height,
+              avatarUrl: loginAvatarPreview || undefined // Use local preview as temporary avatar
+          };
+          localStorage.setItem('repx_username', username);
+          setUserProfile(newProfile);
+          setIsLoggingIn(false);
+          return;
+      }
+
+      try {
+          let avatarUrl: string | undefined = undefined;
+
+          // Upload avatar if selected
+          if (loginAvatarFile) {
+              const uploadedUrl = await uploadAvatar(loginAvatarFile, username);
+              if (uploadedUrl) avatarUrl = uploadedUrl;
+          }
+
+          // 1. Check if user exists
+          const { data: existingUser } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('username', username)
+              .single();
+
+          if (existingUser) {
+              // User exists, log them in (Update profile if new info provided)
+              const updatedProfile = {
+                 username: existingUser.username,
+                 display_name: loginForm.displayName || existingUser.display_name,
+                 age: loginForm.age || existingUser.age,
+                 weight: loginForm.weight || existingUser.weight,
+                 height: loginForm.height || existingUser.height,
+                 avatar_url: avatarUrl || existingUser.avatar_url
+              };
+              
+              // Only update DB if we have new info provided in login form (optional logic)
+              if (loginForm.displayName || loginAvatarFile || loginForm.age) {
+                  await supabase.from('profiles').upsert(updatedProfile);
+              }
+
+              setUserProfile({
+                 username: updatedProfile.username,
+                 displayName: updatedProfile.display_name,
+                 age: updatedProfile.age || '',
+                 weight: updatedProfile.weight || '',
+                 height: updatedProfile.height || '',
+                 avatarUrl: updatedProfile.avatar_url
+             });
+          } else {
+              // Create new user
+              const newProfile = {
+                  username,
+                  display_name: loginForm.displayName || username,
+                  age: loginForm.age,
+                  weight: loginForm.weight,
+                  height: loginForm.height,
+                  avatar_url: avatarUrl
+              };
+
+              const { error } = await supabase
+                  .from('profiles')
+                  .insert(newProfile);
+
+              if (error) throw error;
+
+              setUserProfile({
+                  username: newProfile.username,
+                  displayName: newProfile.display_name,
+                  age: newProfile.age,
+                  weight: newProfile.weight,
+                  height: newProfile.height,
+                  avatarUrl: newProfile.avatar_url
+              });
+          }
+          
+          localStorage.setItem('repx_username', username);
+
+      } catch (error: any) {
+          console.error("Login error:", error);
+          if (error.message?.includes('row-level security')) {
+              alert('⚠️ กรุณาปิด RLS ในตาราง profiles ที่ Supabase ก่อนใช้งาน');
+          } else {
+              alert('เกิดข้อผิดพลาดในการเข้าสู่ระบบ: ' + error.message);
+          }
+      } finally {
+          setIsLoggingIn(false);
+      }
+  };
+
+  const handleUpdateProfile = async (newAvatarFile?: File) => {
+      if (!userProfile) return;
+      
+      try {
+          let newAvatarUrl = userProfile.avatarUrl;
+
+          if (newAvatarFile && isSupabaseConfigured) {
+              const url = await uploadAvatar(newAvatarFile, userProfile.username);
+              if (url) newAvatarUrl = url;
+          }
+
+          if (isSupabaseConfigured) {
+              const { error } = await supabase
+                .from('profiles')
+                .upsert({
+                    username: userProfile.username,
+                    display_name: userProfile.displayName,
+                    age: userProfile.age,
+                    weight: userProfile.weight,
+                    height: userProfile.height,
+                    avatar_url: newAvatarUrl
+                });
+              if (error) throw error;
+          }
+          
+          setUserProfile(prev => prev ? { ...prev, avatarUrl: newAvatarUrl } : null);
+          alert('บันทึกข้อมูลส่วนตัวเรียบร้อยแล้ว');
+      } catch (error: any) {
+           console.error("Update profile error:", error);
+           alert('ไม่สามารถบันทึกข้อมูลได้: ' + error.message);
+      }
+  };
+
+  const handleProfileAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+          const file = e.target.files[0];
+          // Trigger immediate upload and update
+          handleUpdateProfile(file);
+      }
+  };
+
+  const handleLogout = () => {
+      setConfirmModal({
+          isOpen: true,
+          title: 'ออกจากระบบ',
+          message: 'คุณต้องการออกจากระบบใช่หรือไม่?',
+          isDangerous: false,
+          confirmText: 'ออกระบบ',
+          onConfirm: () => {
+              localStorage.removeItem('repx_username');
+              setUserProfile(null);
+              setHistory([]);
+              setActiveSession(null);
+              setActiveTab('workout');
+              setLoginAvatarFile(null);
+              setLoginAvatarPreview(null);
+              setLoginForm({ username: '', displayName: '', age: '', weight: '', height: '' });
+              setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          }
+      });
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0 || !activeSession || !userProfile) return;
+    
+    if (!isSupabaseConfigured) {
+        alert("กรุณาเชื่อมต่อ Supabase เพื่อใช้งานฟีเจอร์อัปโหลดรูปภาพ");
+        return;
     }
-  }, [activeSession, showSummary, activeTab]);
+
+    const file = event.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${userProfile.username}/${activeSession.id}-${Date.now()}.${fileExt}`;
+    
+    setIsUploading(true);
+
+    try {
+        // 1. Upload to Supabase Storage (Bucket: 'workouts')
+        const { error: uploadError } = await supabase.storage
+            .from('workouts')
+            .upload(fileName, file, { upsert: true });
+
+        if (uploadError) {
+            // Check if bucket doesn't exist or permissions issue
+            if (uploadError.message.includes("Bucket not found")) {
+                throw new Error("ไม่พบ Bucket ชื่อ 'workouts' กรุณาสร้างใน Supabase Dashboard");
+            }
+            throw uploadError;
+        }
+
+        // 2. Get Public URL
+        const { data: { publicUrl } } = supabase.storage
+            .from('workouts')
+            .getPublicUrl(fileName);
+
+        // 3. Update active session state
+        setActiveSession({ ...activeSession, imageUrl: publicUrl });
+
+    } catch (error: any) {
+        console.error("Upload error:", error);
+        alert(`อัปโหลดรูปภาพไม่สำเร็จ: ${error.message}`);
+    } finally {
+        setIsUploading(false);
+        // Reset input value to allow re-selecting same file
+        if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  const removeImage = () => {
+      if (!activeSession) return;
+      // Note: We don't delete from Storage immediately to keep it simple, just remove ref
+      setActiveSession({ ...activeSession, imageUrl: undefined });
+  };
 
   // --- Actions ---
 
@@ -213,7 +531,7 @@ const App = () => {
 
   // Phase 3: Confirm and Save (Sync to Supabase)
   const saveWorkout = async () => {
-    if (!activeSession) return;
+    if (!activeSession || !userProfile) return;
     
     // Ensure we have an end time
     const endTime = activeSession.endTime || Date.now();
@@ -244,7 +562,7 @@ const App = () => {
               .from('workouts')
               .upsert({
                   id: completedSession.id,
-                  user_id: userId,
+                  user_id: userProfile.username, // Using username as link
                   data: completedSession,
                   created_at: new Date(endTime).toISOString()
               });
@@ -286,12 +604,12 @@ const App = () => {
         setConfirmModal(prev => ({ ...prev, isOpen: false }));
 
         // Delete from Supabase
-        if (isSupabaseConfigured) {
+        if (isSupabaseConfigured && userProfile) {
           try {
               const { error } = await supabase
                   .from('workouts')
                   .delete()
-                  .eq('user_id', userId);
+                  .eq('user_id', userProfile.username);
               
               if (error) throw error;
           } catch (error: any) {
@@ -362,6 +680,25 @@ const App = () => {
     }, 0);
   }, []);
 
+  const calculateBMI = () => {
+    if (!userProfile?.weight || !userProfile?.height) return { value: 0, label: 'N/A', color: 'text-slate-500' };
+    const w = parseFloat(userProfile.weight);
+    const h = parseFloat(userProfile.height) / 100; // cm to m
+    if (h <= 0) return { value: 0, label: 'N/A', color: 'text-slate-500' };
+    
+    const bmi = w / (h * h);
+    let label = '';
+    let color = '';
+    
+    if (bmi < 18.5) { label = 'ผอมเกินไป'; color = 'text-blue-400'; }
+    else if (bmi < 22.9) { label = 'น้ำหนักปกติ'; color = 'text-emerald-400'; }
+    else if (bmi < 24.9) { label = 'น้ำหนักเกิน'; color = 'text-yellow-400'; }
+    else if (bmi < 29.9) { label = 'อ้วน'; color = 'text-orange-400'; }
+    else { label = 'อ้วนมาก'; color = 'text-red-400'; }
+
+    return { value: bmi.toFixed(1), label, color };
+  };
+
   // --- Renders ---
 
   const renderBottomNav = () => {
@@ -369,7 +706,7 @@ const App = () => {
     if (activeSession || showSummary) return null;
 
     return (
-      <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-2 z-40">
+      <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-2 z-40 pb-safe">
         <div className="flex justify-around items-center max-w-md mx-auto">
           <button 
             onClick={() => setActiveTab('workout')}
@@ -385,10 +722,249 @@ const App = () => {
             <LayoutDashboard size={24} />
             <span className="text-xs mt-1">ภาพรวม</span>
           </button>
+           <button 
+            onClick={() => setActiveTab('profile')}
+            className={`flex flex-col items-center p-2 rounded-xl w-full transition-colors ${activeTab === 'profile' ? 'text-purple-400 bg-slate-800' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            {userProfile?.avatarUrl ? (
+                <img src={userProfile.avatarUrl} alt="Profile" className="w-6 h-6 rounded-full object-cover border border-slate-600" />
+            ) : (
+                <User size={24} />
+            )}
+            <span className="text-xs mt-1">โปรไฟล์</span>
+          </button>
         </div>
       </div>
     );
   };
+
+  const renderLoginScreen = () => (
+      <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
+          <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl">
+              <div className="text-center mb-6">
+                  <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-2">
+                    REPx
+                  </h1>
+                  <p className="text-slate-400">เข้าสู่ระบบเพื่อเริ่มบันทึกการฝึกซ้อม</p>
+              </div>
+
+              {/* Avatar Upload */}
+              <div className="flex justify-center mb-6">
+                  <div className="relative group cursor-pointer" onClick={() => loginAvatarInputRef.current?.click()}>
+                      <div className="w-24 h-24 rounded-full bg-slate-800 border-2 border-slate-700 flex items-center justify-center overflow-hidden shadow-xl">
+                          {loginAvatarPreview ? (
+                              <img src={loginAvatarPreview} alt="Preview" className="w-full h-full object-cover" />
+                          ) : (
+                              <User size={40} className="text-slate-500" />
+                          )}
+                      </div>
+                      <div className="absolute bottom-0 right-0 bg-blue-600 p-2 rounded-full border-2 border-slate-900 shadow-lg group-hover:bg-blue-500 transition-colors">
+                          <Camera size={16} className="text-white" />
+                      </div>
+                      <input 
+                          type="file" 
+                          ref={loginAvatarInputRef}
+                          onChange={handleLoginAvatarChange}
+                          accept="image/*"
+                          className="hidden"
+                      />
+                  </div>
+              </div>
+
+              <div className="space-y-4">
+                  <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">ชื่อผู้ใช้ (Username)</label>
+                      <input 
+                          type="text" 
+                          value={loginForm.username}
+                          onChange={e => setLoginForm({...loginForm, username: e.target.value})}
+                          placeholder="ตั้งชื่อผู้ใช้ของคุณ..."
+                          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                      />
+                  </div>
+                   <div>
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">ชื่อเล่น</label>
+                      <input 
+                          type="text" 
+                          value={loginForm.displayName}
+                          onChange={e => setLoginForm({...loginForm, displayName: e.target.value})}
+                          placeholder="ชื่อที่อยากให้เรียก..."
+                          className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                      />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">อายุ</label>
+                        <input 
+                            type="number" 
+                            value={loginForm.age}
+                            onChange={e => setLoginForm({...loginForm, age: e.target.value})}
+                            placeholder="ปี"
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">น้ำหนัก (kg)</label>
+                        <input 
+                            type="number" 
+                            value={loginForm.weight}
+                            onChange={e => setLoginForm({...loginForm, weight: e.target.value})}
+                            placeholder="kg"
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                  </div>
+                   <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">ส่วนสูง (cm)</label>
+                        <input 
+                            type="number" 
+                            value={loginForm.height}
+                            onChange={e => setLoginForm({...loginForm, height: e.target.value})}
+                            placeholder="cm"
+                            className="w-full bg-slate-800 border border-slate-700 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                  
+                  <button 
+                      onClick={handleLogin}
+                      disabled={isLoggingIn || !loginForm.username.trim()}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/50 transition-all active:scale-95 disabled:opacity-50 mt-4"
+                  >
+                      {isLoggingIn ? <Loader2 className="animate-spin mx-auto" /> : 'เริ่มต้นใช้งาน'}
+                  </button>
+              </div>
+
+              {!isSupabaseConfigured && (
+                  <div className="mt-6 p-3 bg-amber-900/20 border border-amber-900/30 rounded-lg flex items-start gap-2">
+                      <AlertTriangle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
+                      <p className="text-xs text-amber-200/70">ไม่ได้เชื่อมต่อ Database: รูปโปรไฟล์และข้อมูลจะถูกบันทึกเฉพาะในเครื่องนี้เท่านั้น</p>
+                  </div>
+              )}
+          </div>
+      </div>
+  );
+
+  const renderProfileScreen = () => {
+    if (!userProfile) return null;
+    const bmi = calculateBMI();
+
+    return (
+        <div className="max-w-md mx-auto px-4 py-8 pb-24 animate-in fade-in duration-500">
+             <div className="flex justify-between items-end mb-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 mb-1">Profile</h1>
+                    <p className="text-slate-400 text-sm">ข้อมูลส่วนตัวของคุณ</p>
+                </div>
+            </div>
+
+            <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-lg mb-6 text-center relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-purple-900/30 to-transparent"></div>
+                
+                {/* Profile Picture with Edit Overlay */}
+                <div 
+                    className="w-24 h-24 rounded-full bg-slate-700 border-4 border-slate-800 mx-auto mb-4 flex items-center justify-center relative z-10 shadow-xl overflow-hidden group cursor-pointer"
+                    onClick={() => profileAvatarInputRef.current?.click()}
+                >
+                    {userProfile.avatarUrl ? (
+                         <img src={userProfile.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                    ) : (
+                        <User size={48} className="text-slate-400" />
+                    )}
+                    
+                    {/* Hover Overlay */}
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <Upload size={24} className="text-white" />
+                    </div>
+                </div>
+                <input 
+                    type="file" 
+                    ref={profileAvatarInputRef}
+                    onChange={handleProfileAvatarChange}
+                    accept="image/*"
+                    className="hidden"
+                />
+
+                <h2 className="text-2xl font-bold text-white relative z-10">{userProfile.displayName}</h2>
+                <p className="text-slate-500 text-sm relative z-10">@{userProfile.username}</p>
+                
+                <div className="grid grid-cols-3 gap-4 mt-6 relative z-10">
+                    <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
+                        <p className="text-[10px] text-slate-500 uppercase font-bold">อายุ</p>
+                        <p className="text-lg font-bold text-white">{userProfile.age || '-'}</p>
+                    </div>
+                     <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
+                        <p className="text-[10px] text-slate-500 uppercase font-bold">น้ำหนัก</p>
+                        <p className="text-lg font-bold text-white">{userProfile.weight || '-'} <span className="text-[10px]">kg</span></p>
+                    </div>
+                     <div className="bg-slate-900/50 p-3 rounded-xl border border-slate-700/50">
+                        <p className="text-[10px] text-slate-500 uppercase font-bold">ส่วนสูง</p>
+                        <p className="text-lg font-bold text-white">{userProfile.height || '-'} <span className="text-[10px]">cm</span></p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-lg mb-6">
+                <h3 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
+                    <TrendingUp size={16} /> ค่าดัชนีมวลกาย (BMI)
+                </h3>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <p className={`text-3xl font-bold ${bmi.color}`}>{bmi.value}</p>
+                        <p className={`text-sm ${bmi.color}`}>{bmi.label}</p>
+                    </div>
+                    <div className="text-right text-xs text-slate-500">
+                        <p>BMI = น้ำหนัก(kg) / ส่วนสูง(m)²</p>
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-lg mb-6">
+                 <h3 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
+                    <Settings size={16} /> แก้ไขข้อมูล
+                </h3>
+                <div className="space-y-3">
+                    <div className="grid grid-cols-3 gap-3">
+                        <input 
+                            type="number" 
+                            value={userProfile.age}
+                            onChange={(e) => setUserProfile({...userProfile, age: e.target.value})}
+                            placeholder="อายุ"
+                            className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm"
+                        />
+                         <input 
+                            type="number" 
+                            value={userProfile.weight}
+                            onChange={(e) => setUserProfile({...userProfile, weight: e.target.value})}
+                            placeholder="นน."
+                            className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm"
+                        />
+                         <input 
+                            type="number" 
+                            value={userProfile.height}
+                            onChange={(e) => setUserProfile({...userProfile, height: e.target.value})}
+                            placeholder="ส่วนสูง"
+                            className="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white text-sm"
+                        />
+                    </div>
+                    <button 
+                        onClick={() => handleUpdateProfile()}
+                        className="w-full py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2"
+                    >
+                        <Save size={16} /> บันทึกการเปลี่ยนแปลง
+                    </button>
+                </div>
+            </div>
+
+            <button 
+                onClick={handleLogout}
+                className="w-full py-4 border border-red-900/30 bg-red-900/10 text-red-500 rounded-xl hover:bg-red-900/20 transition-colors flex items-center justify-center gap-2 font-medium"
+            >
+                <LogOut size={20} />
+                ออกจากระบบ
+            </button>
+        </div>
+    );
+  }
 
   const renderDashboard = () => {
     // Calculate Stats
@@ -411,7 +987,7 @@ const App = () => {
         <div className="flex justify-between items-end mb-6">
           <div>
               <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-1">Dashboard</h1>
-              <p className="text-slate-400 text-sm">วิเคราะห์ผลการฝึกซ้อมของคุณ</p>
+              <p className="text-slate-400 text-sm">สวัสดีคุณ <span className="text-white font-bold">{userProfile?.displayName}</span></p>
           </div>
           {history.length > 0 && (
               <button 
@@ -503,7 +1079,7 @@ const App = () => {
                                       {new Date(session.startTime!).getDate()}
                                   </span>
                                   {/* Tooltip */}
-                                  <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-xs p-2 rounded border border-slate-600 whitespace-nowrap z-10">
+                                  <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-xs p-2 rounded border border-slate-600 whitespace-nowrap z-10 pointer-events-none">
                                       {session.title}: {(vol/1000).toFixed(1)}k
                                   </div>
                               </div>
@@ -567,17 +1143,23 @@ const App = () => {
                       <div className="flex justify-between items-start mb-2">
                           <div>
                               <div className="flex items-center gap-2">
-                                  <span className={`w-2 h-2 rounded-full ${
+                                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
                                       session.type === 'Push' ? 'bg-red-500' : 
                                       session.type === 'Pull' ? 'bg-blue-500' : 
                                       session.type === 'Legs' ? 'bg-emerald-500' : 'bg-purple-500'
                                   }`}></span>
-                                  <h3 className="font-bold text-white">{session.title}</h3>
+                                  <h3 className="font-bold text-white line-clamp-1">{session.title}</h3>
                               </div>
                               <div className="flex items-center gap-2 text-slate-400 text-xs mt-1">
                                   <span className="flex items-center gap-1"><CalendarClock size={10} /> {session.date}</span>
                                   <span>•</span>
                                   <span className="flex items-center gap-1"><Timer size={10} /> {formatDuration(session.startTime, session.endTime)}</span>
+                                  {session.imageUrl && (
+                                     <>
+                                        <span>•</span>
+                                        <span className="flex items-center gap-1 text-blue-400"><ImageIcon size={10} /> มีรูปภาพ</span>
+                                     </>
+                                  )}
                               </div>
                           </div>
                           
@@ -615,11 +1197,20 @@ const App = () => {
 
   const renderSelectionScreen = () => (
     <div className="max-w-md mx-auto px-4 py-8 pb-24">
-      <div className="text-center mb-8">
-        <h1 className="text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-2">
-          REPx By FUUYARP
-        </h1>
-        <p className="text-slate-400">เลือกโปรแกรมฝึกสำหรับวันนี้</p>
+      <div className="flex justify-between items-start mb-8">
+          <div>
+            <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
+              REPx
+            </h1>
+            <p className="text-slate-400 text-xs mt-1">Ready for the pump, <span className="text-white font-bold">{userProfile?.displayName}</span>?</p>
+          </div>
+          <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
+             {userProfile?.avatarUrl ? (
+                 <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+             ) : (
+                <User size={20} className="text-slate-400" />
+             )}
+          </div>
       </div>
 
       <div className="space-y-4">
@@ -730,13 +1321,61 @@ const App = () => {
             ))}
             
             {/* Add Exercise Button */}
-            <button 
-                onClick={addExercise}
-                className="w-full py-4 border-2 border-dashed border-slate-700 rounded-xl text-slate-400 hover:text-white hover:border-blue-500 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 active:scale-95"
-            >
-                <Plus size={20} />
-                <span className="font-medium">เพิ่มท่าออกกำลังกาย</span>
-            </button>
+            <div className="grid grid-cols-2 gap-3 mt-4">
+                <button 
+                    onClick={addExercise}
+                    className="py-4 border-2 border-dashed border-slate-700 rounded-xl text-slate-400 hover:text-white hover:border-blue-500 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 active:scale-95"
+                >
+                    <Plus size={20} />
+                    <span className="font-medium">เพิ่มท่า</span>
+                </button>
+
+                <div className="relative">
+                    <input 
+                        type="file" 
+                        accept="image/*" 
+                        ref={fileInputRef}
+                        className="hidden" 
+                        onChange={handleImageUpload}
+                    />
+                    <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className={`w-full h-full py-4 border-2 border-dashed border-slate-700 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95 ${
+                            isUploading ? 'bg-slate-800 cursor-wait' : 'hover:border-purple-500 hover:bg-slate-800 text-slate-400 hover:text-purple-400'
+                        }`}
+                    >
+                         {isUploading ? (
+                             <Loader2 size={20} className="animate-spin text-purple-500" />
+                         ) : (
+                             <>
+                                <Camera size={20} />
+                                <span className="font-medium">ถ่ายรูป</span>
+                             </>
+                         )}
+                    </button>
+                </div>
+            </div>
+
+            {/* Image Preview Area */}
+            {activeSession.imageUrl && (
+                <div className="mt-4 relative group rounded-xl overflow-hidden border border-slate-700">
+                    <img 
+                        src={activeSession.imageUrl} 
+                        alt="Session Preview" 
+                        className="w-full h-48 object-cover"
+                    />
+                    <button 
+                        onClick={removeImage}
+                        className="absolute top-2 right-2 bg-red-600/80 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                    >
+                        <XCircle size={20} />
+                    </button>
+                    <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-xs text-white backdrop-blur-sm">
+                        📸 รูปประจำวัน
+                    </div>
+                </div>
+            )}
         </div>
 
         {/* Bottom Action */}
@@ -784,6 +1423,24 @@ const App = () => {
                         <p className="text-lg font-bold text-blue-400">{durationText}</p>
                     </div>
                 </div>
+
+                {/* Photo in Summary */}
+                {activeSession.imageUrl && (
+                    <div className="mb-4 flex-shrink-0">
+                        <div className="rounded-xl overflow-hidden border border-slate-700 shadow-lg relative h-32">
+                             <img 
+                                src={activeSession.imageUrl} 
+                                alt="Workout Summary" 
+                                className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex items-end p-2">
+                                <p className="text-white text-xs font-medium flex items-center gap-1">
+                                    <ImageIcon size={12} /> ความทรงจำวันนี้
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 
                 {/* Detailed Breakdown List */}
                 <div className="flex-1 overflow-y-auto pr-1 mb-4 space-y-3 custom-scrollbar">
@@ -844,10 +1501,14 @@ const App = () => {
   };
 
   const renderContent = () => {
+    // If not logged in, show login screen
+    if (!userProfile) return renderLoginScreen();
+
     if (showSummary) return renderSummary();
     if (activeSession) return renderActiveSession();
     
     if (activeTab === 'dashboard') return renderDashboard();
+    if (activeTab === 'profile') return renderProfileScreen();
     return renderSelectionScreen();
   };
 
@@ -856,8 +1517,8 @@ const App = () => {
       {renderContent()}
       {renderBottomNav()}
       
-      {/* AI Coach FAB - Only show on main screens, not summary */}
-      {!showSummary && !activeSession && (
+      {/* AI Coach FAB - Only show on main screens, not summary or login */}
+      {userProfile && !showSummary && !activeSession && (
         <button 
             onClick={() => setIsCoachOpen(true)}
             className="fixed bottom-20 right-6 z-30 bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-xl shadow-blue-900/50 transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
@@ -889,6 +1550,8 @@ const App = () => {
         onConfirm={confirmModal.onConfirm}
         onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
         isDangerous={confirmModal.isDangerous}
+        confirmText={confirmModal.confirmText}
+        cancelText={confirmModal.cancelText}
       />
     </div>
   );

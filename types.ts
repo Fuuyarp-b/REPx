@@ -30,10 +30,20 @@ export interface WorkoutSession {
   endTime?: number;
   exercises: Exercise[];
   status: 'active' | 'completed';
+  imageUrl?: string; // New field for photo
 }
 
 export interface ChatMessage {
   role: 'user' | 'model';
   text: string;
   timestamp: number;
+}
+
+export interface UserProfile {
+  username: string;
+  displayName: string;
+  age: string;
+  weight: string;
+  height: string;
+  avatarUrl?: string;
 }

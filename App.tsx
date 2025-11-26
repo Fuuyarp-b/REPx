@@ -1346,8 +1346,14 @@ const App = () => {
                     <AICoachModal isOpen={isCoachOpen} onClose={() => setIsCoachOpen(false)} />
                     
                     <ConfirmModal 
+                        isOpen={confirmModal.isOpen}
                         onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-                        {...confirmModal}
+                        title={confirmModal.title}
+                        message={confirmModal.message}
+                        onConfirm={confirmModal.onConfirm}
+                        isDangerous={confirmModal.isDangerous}
+                        confirmText={confirmModal.confirmText}
+                        cancelText={confirmModal.cancelText}
                     />
                 </div>
             </>

@@ -251,8 +251,14 @@ const App = () => {
           
           if (error) throw error;
       } catch (error: any) {
-          console.error("Failed to save workout to Supabase:", error.message || error);
-          alert(`ไม่สามารถบันทึกข้อมูลออนไลน์ได้: ${error.message || 'Unknown Error'}`);
+          const msg = error.message || 'Unknown Error';
+          console.error("Failed to save workout to Supabase:", msg);
+          
+          if (msg.includes('row-level security')) {
+              alert('⚠️ บันทึกไม่ได้: ติดสิทธิ์ความปลอดภัย (RLS)\n\nกรุณาไปที่ Supabase > SQL Editor แล้วรันคำสั่ง:\nALTER TABLE workouts DISABLE ROW LEVEL SECURITY;');
+          } else {
+              alert(`ไม่สามารถบันทึกข้อมูลออนไลน์ได้: ${msg}`);
+          }
       }
     }
   };
@@ -289,7 +295,11 @@ const App = () => {
               
               if (error) throw error;
           } catch (error: any) {
-              console.error("Failed to clear history from Supabase:", error.message || error);
+              const msg = error.message || 'Unknown Error';
+              console.error("Failed to clear history from Supabase:", msg);
+              if (msg.includes('row-level security')) {
+                  alert('⚠️ ลบข้อมูลไม่ได้: ติดสิทธิ์ RLS กรุณาปิด RLS ใน Supabase');
+              }
           }
         }
       }
@@ -317,7 +327,11 @@ const App = () => {
               
               if (error) throw error;
           } catch (error: any) {
-              console.error("Failed to delete item from Supabase:", error.message || error);
+              const msg = error.message || 'Unknown Error';
+              console.error("Failed to delete item from Supabase:", msg);
+              if (msg.includes('row-level security')) {
+                   alert('⚠️ ลบข้อมูลไม่ได้: ติดสิทธิ์ RLS กรุณาปิด RLS ใน Supabase');
+              }
           }
         }
       }

@@ -241,6 +241,21 @@ const App = () => {
       });
   };
 
+  const handleCancelWorkout = () => {
+      setConfirmModal({
+          isOpen: true,
+          title: 'ยกเลิกการฝึกซ้อม',
+          message: 'คุณต้องการยกเลิกการฝึกซ้อมนี้ใช่หรือไม่? ความคืบหน้าปัจจุบันจะหายไป',
+          confirmText: 'ยกเลิกการฝึก',
+          cancelText: 'ออกกำลังกายต่อ',
+          isDangerous: true,
+          onConfirm: () => {
+              setActiveSession(null);
+              setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          }
+      });
+  };
+
   // Workout Logic
   const startWorkout = (type: WorkoutType) => {
     let exercises: Exercise[] = [];
@@ -734,20 +749,28 @@ const App = () => {
     return (
       <div className="pb-24 max-w-md mx-auto animate-in slide-in-from-bottom-10 duration-500">
         <div className="bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-4 py-4 border-b border-slate-800 flex justify-between items-center mb-4">
-            <div>
-                <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                    {activeSession.type === 'Push' ? <Flame className="text-red-500" /> : 
-                     activeSession.type === 'Pull' ? <Anchor className="text-blue-500" /> : 
-                     activeSession.type === 'Legs' ? <Zap className="text-emerald-500" /> :
-                     <Settings className="text-purple-500" />}
-                    {activeSession.title}
-                </h2>
-                <div className="flex items-center gap-2 text-slate-400 text-xs mt-1">
-                    <CalendarClock size={12} />
-                    <span>{activeSession.date}</span>
-                    <span className="mx-1">•</span>
-                    <Timer size={12} />
-                    <span>{formatDuration(activeSession.startTime, Date.now())} (Running)</span>
+            <div className="flex items-center gap-2">
+                <button 
+                    onClick={handleCancelWorkout}
+                    className="p-2 -ml-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                    <ChevronLeft size={24} />
+                </button>
+                <div>
+                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        {activeSession.type === 'Push' ? <Flame className="text-red-500" /> : 
+                        activeSession.type === 'Pull' ? <Anchor className="text-blue-500" /> : 
+                        activeSession.type === 'Legs' ? <Zap className="text-emerald-500" /> :
+                        <Settings className="text-purple-500" />}
+                        {activeSession.title}
+                    </h2>
+                    <div className="flex items-center gap-2 text-slate-400 text-xs mt-1">
+                        <CalendarClock size={12} />
+                        <span>{activeSession.date}</span>
+                        <span className="mx-1">•</span>
+                        <Timer size={12} />
+                        <span>{formatDuration(activeSession.startTime, Date.now())} (Running)</span>
+                    </div>
                 </div>
             </div>
             <button 

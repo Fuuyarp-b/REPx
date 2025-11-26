@@ -31,6 +31,18 @@ export const MOTIVATIONAL_QUOTES = [
   "ชัยชนะที่ยิ่งใหญ่ที่สุด คือการชนะใจตัวเอง"
 ];
 
+// Cool and Cute Avatars from DiceBear
+export const PRESET_AVATARS = [
+  "https://api.dicebear.com/9.x/adventurer/svg?seed=Felix&backgroundColor=b6e3f4",
+  "https://api.dicebear.com/9.x/adventurer/svg?seed=Aneka&backgroundColor=c0aede",
+  "https://api.dicebear.com/9.x/adventurer/svg?seed=Alexander&backgroundColor=ffdfbf",
+  "https://api.dicebear.com/9.x/adventurer/svg?seed=Willow&backgroundColor=d1d4f9",
+  "https://api.dicebear.com/9.x/adventurer/svg?seed=Ryan&backgroundColor=ffd5dc",
+  "https://api.dicebear.com/9.x/adventurer/svg?seed=Nala&backgroundColor=c0aede",
+  "https://api.dicebear.com/9.x/bottts/svg?seed=Robot01&backgroundColor=ffdfbf",
+  "https://api.dicebear.com/9.x/bottts/svg?seed=Robot02&backgroundColor=b6e3f4",
+];
+
 export const PUSH_ROUTINE: Exercise[] = [
   {
     id: 'push-1',

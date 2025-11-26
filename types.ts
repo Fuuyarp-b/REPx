@@ -44,4 +44,5 @@ export interface UserProfile {
   age: string;
   weight: string;
   height: string;
+  avatarUrl: string; // Added avatar URL
 }

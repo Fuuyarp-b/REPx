@@ -1,8 +1,8 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Dumbbell, Trophy, MessageCircle, ChevronLeft, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save } from 'lucide-react';
+import { Dumbbell, Trophy, MessageCircle, ChevronLeft, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, CheckCircle } from 'lucide-react';
 import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile } from './types';
-import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES } from './constants';
+import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES, PRESET_AVATARS } from './constants';
 import { ExerciseCard } from './components/ExerciseCard';
 import { AICoachModal } from './components/AICoachModal';
 import { ConfirmModal } from './components/ConfirmModal';
@@ -21,7 +21,7 @@ const App = () => {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   // Login Form State
-  const [loginForm, setLoginForm] = useState({ username: '', displayName: '', age: '', weight: '', height: '' });
+  const [loginForm, setLoginForm] = useState({ username: '', displayName: '', age: '', weight: '', height: '', avatarUrl: PRESET_AVATARS[0] });
 
   // Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -69,7 +69,7 @@ const App = () => {
   const fetchUserProfile = async (username: string) => {
     if (!isSupabaseConfigured) {
         // Fallback for offline/no-db mode
-        setUserProfile({ username, displayName: username, age: '', weight: '', height: '' });
+        setUserProfile({ username, displayName: username, age: '', weight: '', height: '', avatarUrl: PRESET_AVATARS[0] });
         return;
     }
 
@@ -91,15 +91,16 @@ const App = () => {
                  age: data.age || '',
                  weight: data.weight || '',
                  height: data.height || '',
+                 avatarUrl: data.avatar_url || PRESET_AVATARS[0]
              });
         } else {
             // Profile doesn't exist remotely (maybe first time on new device but skipped creation?)
             // We just treat it as a new session locally for now
-             setUserProfile({ username, displayName: username, age: '', weight: '', height: '' });
+             setUserProfile({ username, displayName: username, age: '', weight: '', height: '', avatarUrl: PRESET_AVATARS[0] });
         }
     } catch (err) {
         console.error("Profile fetch error:", err);
-        setUserProfile({ username, displayName: username, age: '', weight: '', height: '' });
+        setUserProfile({ username, displayName: username, age: '', weight: '', height: '', avatarUrl: PRESET_AVATARS[0] });
     }
   };
 
@@ -146,6 +147,7 @@ const App = () => {
               age: loginForm.age,
               weight: loginForm.weight,
               height: loginForm.height,
+              avatarUrl: loginForm.avatarUrl
           };
           localStorage.setItem('repx_username', username);
           setUserProfile(newProfile);
@@ -169,6 +171,10 @@ const App = () => {
                  age: loginForm.age || existingUser.age,
                  weight: loginForm.weight || existingUser.weight,
                  height: loginForm.height || existingUser.height,
+                 // Note: We don't overwrite avatar if user already exists unless they change it in profile later
+                 // But if the login form had a selection, maybe user wants to update? 
+                 // For now, let's keep existing avatar to avoid accidental overwrite on simple login
+                 avatar_url: existingUser.avatar_url || loginForm.avatarUrl
               };
               
               // Only update DB if we have new info provided in login form (optional logic)
@@ -182,6 +188,7 @@ const App = () => {
                  age: updatedProfile.age || '',
                  weight: updatedProfile.weight || '',
                  height: updatedProfile.height || '',
+                 avatarUrl: updatedProfile.avatar_url
              });
           } else {
               // Create new user
@@ -191,6 +198,7 @@ const App = () => {
                   age: loginForm.age,
                   weight: loginForm.weight,
                   height: loginForm.height,
+                  avatar_url: loginForm.avatarUrl
               };
 
               const { error } = await supabase
@@ -205,6 +213,7 @@ const App = () => {
                   age: newProfile.age,
                   weight: newProfile.weight,
                   height: newProfile.height,
+                  avatarUrl: newProfile.avatar_url
               });
           }
           
@@ -235,6 +244,7 @@ const App = () => {
                     age: userProfile.age,
                     weight: userProfile.weight,
                     height: userProfile.height,
+                    avatar_url: userProfile.avatarUrl
                 });
               if (error) throw error;
           }
@@ -259,7 +269,7 @@ const App = () => {
               setHistory([]);
               setActiveSession(null);
               setActiveTab('workout');
-              setLoginForm({ username: '', displayName: '', age: '', weight: '', height: '' });
+              setLoginForm({ username: '', displayName: '', age: '', weight: '', height: '', avatarUrl: PRESET_AVATARS[0] });
               setConfirmModal(prev => ({ ...prev, isOpen: false }));
           }
       });
@@ -608,6 +618,25 @@ const App = () => {
               </div>
 
               <div className="space-y-4">
+                  {/* Avatar Selection */}
+                  <div className="mb-4">
+                      <label className="block text-xs font-bold text-slate-500 uppercase mb-2 ml-1 text-center">เลือกรูปโปรไฟล์</label>
+                      <div className="flex justify-center mb-3">
+                          <img src={loginForm.avatarUrl} alt="Selected Avatar" className="w-24 h-24 rounded-full border-4 border-blue-500 bg-slate-800" />
+                      </div>
+                      <div className="grid grid-cols-4 gap-2">
+                          {PRESET_AVATARS.map((avatar, idx) => (
+                              <button
+                                  key={idx}
+                                  onClick={() => setLoginForm({ ...loginForm, avatarUrl: avatar })}
+                                  className={`rounded-full p-1 border-2 transition-all ${loginForm.avatarUrl === avatar ? 'border-blue-500 scale-110' : 'border-transparent hover:border-slate-600'}`}
+                              >
+                                  <img src={avatar} alt={`Avatar ${idx}`} className="w-full h-full rounded-full" />
+                              </button>
+                          ))}
+                      </div>
+                  </div>
+
                   <div>
                       <label className="block text-xs font-bold text-slate-500 uppercase mb-1 ml-1">ชื่อผู้ใช้ (Username)</label>
                       <input 
@@ -696,9 +725,13 @@ const App = () => {
             <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-lg mb-6 text-center relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-b from-purple-900/30 to-transparent"></div>
                 
-                {/* Profile Picture Placeholder */}
-                <div className="w-24 h-24 rounded-full bg-slate-700 border-4 border-slate-800 mx-auto mb-4 flex items-center justify-center relative z-10 shadow-xl overflow-hidden">
-                    <User size={48} className="text-slate-400" />
+                {/* Profile Picture */}
+                <div className="w-24 h-24 rounded-full bg-slate-700 border-4 border-slate-800 mx-auto mb-4 flex items-center justify-center relative z-10 shadow-xl overflow-hidden group">
+                    <img 
+                      src={userProfile.avatarUrl} 
+                      alt="Profile" 
+                      className="w-full h-full object-cover"
+                    />
                 </div>
 
                 <h2 className="text-2xl font-bold text-white relative z-10">{userProfile.displayName}</h2>
@@ -739,7 +772,23 @@ const App = () => {
                  <h3 className="text-sm font-bold text-slate-400 uppercase mb-4 flex items-center gap-2">
                     <Settings size={16} /> แก้ไขข้อมูล
                 </h3>
-                <div className="space-y-3">
+                <div className="space-y-4">
+                     {/* Avatar Edit */}
+                    <div>
+                         <label className="block text-xs font-bold text-slate-500 uppercase mb-2">เปลี่ยนรูปโปรไฟล์</label>
+                         <div className="grid grid-cols-4 gap-2">
+                          {PRESET_AVATARS.map((avatar, idx) => (
+                              <button
+                                  key={idx}
+                                  onClick={() => setUserProfile({ ...userProfile, avatarUrl: avatar })}
+                                  className={`rounded-full p-1 border-2 transition-all ${userProfile.avatarUrl === avatar ? 'border-blue-500 scale-110' : 'border-transparent hover:border-slate-600'}`}
+                              >
+                                  <img src={avatar} alt={`Avatar ${idx}`} className="w-full h-full rounded-full" />
+                              </button>
+                          ))}
+                        </div>
+                    </div>
+
                     <div className="grid grid-cols-3 gap-3">
                         <input 
                             type="number" 
@@ -802,9 +851,14 @@ const App = () => {
     return (
       <div className="max-w-md mx-auto px-4 py-8 pb-24 animate-in fade-in duration-500">
         <div className="flex justify-between items-end mb-6">
-          <div>
-              <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-1">Dashboard</h1>
-              <p className="text-slate-400 text-sm">สวัสดีคุณ <span className="text-white font-bold">{userProfile?.displayName}</span></p>
+          <div className="flex items-center gap-3">
+              {userProfile?.avatarUrl && (
+                  <img src={userProfile.avatarUrl} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-slate-700 bg-slate-800" />
+              )}
+              <div>
+                <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-1">Dashboard</h1>
+                <p className="text-slate-400 text-sm">สวัสดีคุณ <span className="text-white font-bold">{userProfile?.displayName}</span></p>
+              </div>
           </div>
           {history.length > 0 && (
               <button 
@@ -1016,7 +1070,11 @@ const App = () => {
             <p className="text-slate-400 text-xs mt-1">Ready for the pump, <span className="text-white font-bold">{userProfile?.displayName}</span>?</p>
           </div>
           <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
-             <User size={20} className="text-slate-400" />
+             {userProfile?.avatarUrl ? (
+                <img src={userProfile.avatarUrl} alt="User Avatar" className="w-full h-full object-cover" />
+             ) : (
+                <User size={20} className="text-slate-400" />
+             )}
           </div>
       </div>
 

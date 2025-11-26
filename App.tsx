@@ -1,6 +1,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
-import { Dumbbell, Trophy, MessageCircle, ChevronLeft, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save } from 'lucide-react';
+import { Dumbbell, Trophy, MessageCircle, ChevronLeft, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, TrendingUp, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, Filter } from 'lucide-react';
 import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile } from './types';
 import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES, PRESET_AVATARS } from './constants';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -19,6 +19,7 @@ const App = () => {
   const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [filterRange, setFilterRange] = useState<'all' | 'day' | 'week' | 'month' | 'year'>('all');
   
   // Login Form State
   const [loginForm, setLoginForm] = useState({ username: '', displayName: '', age: '', weight: '', height: '', avatarUrl: PRESET_AVATARS[0] });
@@ -171,9 +172,6 @@ const App = () => {
                  age: loginForm.age || existingUser.age,
                  weight: loginForm.weight || existingUser.weight,
                  height: loginForm.height || existingUser.height,
-                 // Note: We don't overwrite avatar if user already exists unless they change it in profile later
-                 // But if the login form had a selection, maybe user wants to update? 
-                 // For now, let's keep existing avatar to avoid accidental overwrite on simple login
                  avatar_url: existingUser.avatar_url || loginForm.avatarUrl
               };
               
@@ -611,7 +609,7 @@ const App = () => {
       <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6">
           <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl">
               <div className="text-center mb-6">
-                  <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-2">
+                  <h1 className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-2">
                     REPx
                   </h1>
                   <p className="text-slate-400">เข้าสู่ระบบเพื่อเริ่มบันทึกการฝึกซ้อม</p>
@@ -833,19 +831,57 @@ const App = () => {
   }
 
   const renderDashboard = () => {
-    // Calculate Stats
-    const totalWorkouts = history.length;
-    const totalVolume = history.reduce((acc, s) => acc + calculateVolume(s), 0);
-    const totalDurationMs = history.reduce((acc, s) => acc + ((s.endTime || 0) - (s.startTime || 0)), 0);
+    // Filter History Logic
+    const getFilteredHistory = () => {
+        const now = new Date();
+        return history.filter(session => {
+            if (!session.startTime) return false;
+            const date = new Date(session.startTime);
+            
+            if (filterRange === 'all') return true;
+            
+            if (filterRange === 'day') {
+                 return date.getDate() === now.getDate() &&
+                        date.getMonth() === now.getMonth() &&
+                        date.getFullYear() === now.getFullYear();
+            }
+
+            if (filterRange === 'week') {
+                // Get start of the current week (Sunday)
+                const startOfWeek = new Date(now);
+                startOfWeek.setDate(now.getDate() - now.getDay());
+                startOfWeek.setHours(0, 0, 0, 0);
+                return date >= startOfWeek;
+            }
+
+            if (filterRange === 'month') {
+                return date.getMonth() === now.getMonth() &&
+                       date.getFullYear() === now.getFullYear();
+            }
+
+            if (filterRange === 'year') {
+                return date.getFullYear() === now.getFullYear();
+            }
+            return true;
+        });
+    };
+
+    const filteredHistory = getFilteredHistory();
+
+    // Calculate Stats from filtered history
+    const totalWorkouts = filteredHistory.length;
+    const totalVolume = filteredHistory.reduce((acc, s) => acc + calculateVolume(s), 0);
+    const totalDurationMs = filteredHistory.reduce((acc, s) => acc + ((s.endTime || 0) - (s.startTime || 0)), 0);
     const avgDurationMinutes = totalWorkouts > 0 ? Math.floor((totalDurationMs / totalWorkouts) / 60000) : 0;
 
-    const pushCount = history.filter(s => s.type === 'Push').length;
-    const pullCount = history.filter(s => s.type === 'Pull').length;
-    const legsCount = history.filter(s => s.type === 'Legs').length;
-    const customCount = history.filter(s => s.type === 'Custom').length;
+    const pushCount = filteredHistory.filter(s => s.type === 'Push').length;
+    const pullCount = filteredHistory.filter(s => s.type === 'Pull').length;
+    const legsCount = filteredHistory.filter(s => s.type === 'Legs').length;
+    const customCount = filteredHistory.filter(s => s.type === 'Custom').length;
 
-    // Prepare Graph Data (Last 7 sessions)
-    const last7Sessions = [...history].reverse().slice(0, 7).reverse();
+    // Prepare Graph Data (Last 7 sessions from filtered list)
+    // Note: Graph usually shows trend, if we filter by Day, graph might show only 1 item which is expected.
+    const last7Sessions = [...filteredHistory].reverse().slice(0, 7).reverse();
     const maxVol = last7Sessions.length > 0 ? Math.max(...last7Sessions.map(s => calculateVolume(s))) : 100;
 
     return (
@@ -868,6 +904,27 @@ const App = () => {
                   <Trash2 size={16} />
               </button>
           )}
+        </div>
+
+        {/* Filter Controls */}
+        <div className="flex bg-slate-800 p-1 rounded-xl mb-6 overflow-x-auto no-scrollbar">
+            {['all', 'day', 'week', 'month', 'year'].map((range) => (
+                <button
+                    key={range}
+                    onClick={() => setFilterRange(range as any)}
+                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                        filterRange === range 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                    }`}
+                >
+                    {range === 'all' && 'ทั้งหมด'}
+                    {range === 'day' && 'วันนี้'}
+                    {range === 'week' && 'สัปดาห์นี้'}
+                    {range === 'month' && 'เดือนนี้'}
+                    {range === 'year' && 'ปีนี้'}
+                </button>
+            ))}
         </div>
 
         {/* Missing Config Warning */}
@@ -901,459 +958,401 @@ const App = () => {
           <div className="space-y-6">
               {/* Highlight Cards */}
               <div className="grid grid-cols-3 gap-3">
-                  <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-3 rounded-2xl border border-slate-700 shadow-lg relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                          <Trophy size={40} />
-                      </div>
-                      <p className="text-slate-400 text-[10px] uppercase font-bold mb-1">Workouts</p>
-                      <p className="text-2xl font-bold text-white">{totalWorkouts}</p>
+                  <div className="bg-gradient-to-br from-blue-900/40 to-slate-800 p-4 rounded-2xl border border-blue-500/20 shadow-lg relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-2 opacity-10"><Trophy size={48} /></div>
+                      <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">จำนวนครั้ง</p>
+                      <h3 className="text-2xl font-bold text-blue-400">{totalWorkouts}</h3>
                   </div>
-                  <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-3 rounded-2xl border border-slate-700 shadow-lg relative overflow-hidden group">
-                       <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity text-emerald-500">
-                          <Zap size={40} />
-                      </div>
-                      <p className="text-slate-400 text-[10px] uppercase font-bold mb-1">Volume (kg)</p>
-                      <p className="text-2xl font-bold text-emerald-400">{(totalVolume / 1000).toFixed(1)}k</p>
+                  <div className="bg-gradient-to-br from-emerald-900/40 to-slate-800 p-4 rounded-2xl border border-emerald-500/20 shadow-lg relative overflow-hidden">
+                      <div className="absolute top-0 right-0 p-2 opacity-10"><Dumbbell size={48} /></div>
+                      <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">นน.รวม (kg)</p>
+                      <h3 className="text-2xl font-bold text-emerald-400">{(totalVolume / 1000).toFixed(1)}k</h3>
                   </div>
-                   <div className="bg-gradient-to-br from-slate-800 to-slate-900 p-3 rounded-2xl border border-slate-700 shadow-lg relative overflow-hidden group">
-                      <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity text-orange-500">
-                          <Timer size={40} />
-                      </div>
-                      <p className="text-slate-400 text-[10px] uppercase font-bold mb-1">Avg Time</p>
-                      <p className="text-2xl font-bold text-orange-400">{avgDurationMinutes}<span className="text-xs ml-1 text-slate-500">น.</span></p>
+                  <div className="bg-gradient-to-br from-orange-900/40 to-slate-800 p-4 rounded-2xl border border-orange-500/20 shadow-lg relative overflow-hidden">
+                       <div className="absolute top-0 right-0 p-2 opacity-10"><Timer size={48} /></div>
+                      <p className="text-slate-400 text-[10px] uppercase font-bold tracking-wider mb-1">เวลาเฉลี่ย</p>
+                      <h3 className="text-2xl font-bold text-orange-400">{avgDurationMinutes}<span className="text-sm font-medium text-slate-500 ml-1">น.</span></h3>
                   </div>
               </div>
 
-              {/* Volume Progress Chart */}
-              <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-lg">
-                  <div className="flex items-center gap-2 mb-6">
-                      <TrendingUp size={20} className="text-blue-400" />
-                      <h2 className="text-base font-bold text-white">แนวโน้ม Volume (7 ครั้งล่าสุด)</h2>
-                  </div>
-                  <div className="h-40 flex items-end justify-between gap-2 px-1">
-                      {last7Sessions.map((session, index) => {
-                          const vol = calculateVolume(session);
-                          const heightPct = maxVol > 0 ? (vol / maxVol) * 100 : 0;
-                          const colorClass = 
-                            session.type === 'Push' ? 'bg-red-500' : 
-                            session.type === 'Pull' ? 'bg-blue-500' : 
-                            session.type === 'Legs' ? 'bg-emerald-500' : 
-                            'bg-purple-500';
-                          
-                          return (
-                              <div key={index} className="flex flex-col items-center gap-1 flex-1 group relative">
-                                  <div 
-                                      className={`w-full min-w-[8px] max-w-[24px] rounded-t-lg transition-all duration-500 hover:opacity-80 ${colorClass}`}
-                                      style={{ height: `${Math.max(heightPct, 5)}%` }}
-                                  ></div>
-                                  <span className="text-[9px] text-slate-500 font-mono">
-                                      {new Date(session.startTime!).getDate()}
-                                  </span>
-                                  {/* Tooltip */}
-                                  <div className="absolute bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900 text-white text-xs p-2 rounded border border-slate-600 whitespace-nowrap z-10 pointer-events-none">
-                                      {session.title}: {(vol/1000).toFixed(1)}k
+               {/* Distribution Bar */}
+               <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-lg">
+                   <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                       <BarChart3 size={16} className="text-slate-400" /> สัดส่วนการฝึก
+                   </h3>
+                   <div className="flex h-4 rounded-full overflow-hidden bg-slate-900 mb-2">
+                       {totalWorkouts > 0 ? (
+                           <>
+                            <div style={{ width: `${(pushCount / totalWorkouts) * 100}%` }} className="bg-red-500 h-full"></div>
+                            <div style={{ width: `${(pullCount / totalWorkouts) * 100}%` }} className="bg-blue-500 h-full"></div>
+                            <div style={{ width: `${(legsCount / totalWorkouts) * 100}%` }} className="bg-green-500 h-full"></div>
+                            <div style={{ width: `${(customCount / totalWorkouts) * 100}%` }} className="bg-purple-500 h-full"></div>
+                           </>
+                       ) : (
+                           <div className="w-full bg-slate-800 h-full"></div>
+                       )}
+                   </div>
+                   <div className="flex justify-between text-xs text-slate-400 mt-2">
+                       <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500"></div> Push ({pushCount})</div>
+                       <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"></div> Pull ({pullCount})</div>
+                       <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-green-500"></div> Legs ({legsCount})</div>
+                       <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500"></div> Custom ({customCount})</div>
+                   </div>
+               </div>
+
+              {/* Volume Trend Graph */}
+              <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 shadow-lg">
+                   <h3 className="text-sm font-bold text-white mb-4 flex items-center gap-2">
+                       <TrendingUp size={16} className="text-slate-400" /> แนวโน้มความแข็งแรง (Volume)
+                   </h3>
+                   <div className="h-40 flex items-end gap-2">
+                        {last7Sessions.length > 0 ? last7Sessions.map((s, i) => {
+                             const vol = calculateVolume(s);
+                             const heightPercent = (vol / maxVol) * 100;
+                             const colorClass = s.type === 'Push' ? 'bg-red-500' : s.type === 'Pull' ? 'bg-blue-500' : s.type === 'Legs' ? 'bg-green-500' : 'bg-purple-500';
+                             return (
+                                 <div key={i} className="flex-1 flex flex-col items-center group">
+                                     <div 
+                                        className={`w-full rounded-t-sm opacity-60 group-hover:opacity-100 transition-all ${colorClass}`} 
+                                        style={{ height: `${Math.max(heightPercent, 10)}%` }}
+                                     ></div>
+                                     <span className="text-[10px] text-slate-500 mt-1 truncate w-full text-center">
+                                         {new Date(s.startTime || 0).getDate()}
+                                     </span>
+                                 </div>
+                             )
+                        }) : (
+                             <div className="w-full h-full flex items-center justify-center text-slate-600 text-xs">ไม่มีข้อมูลกราฟ</div>
+                        )}
+                   </div>
+              </div>
+
+              {/* History List */}
+              <div>
+                  <h3 className="text-sm font-bold text-slate-400 uppercase mb-3 px-1">ประวัติการฝึกซ้อม ({filteredHistory.length})</h3>
+                  <div className="space-y-3">
+                      {filteredHistory.map((session) => (
+                          <div key={session.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center group">
+                              <div className="flex items-center gap-4">
+                                  <div className={`p-3 rounded-full ${
+                                      session.type === 'Push' ? 'bg-red-900/30 text-red-400' : 
+                                      session.type === 'Pull' ? 'bg-blue-900/30 text-blue-400' : 
+                                      session.type === 'Legs' ? 'bg-green-900/30 text-green-400' :
+                                      'bg-purple-900/30 text-purple-400'
+                                  }`}>
+                                      {session.type === 'Push' ? <Flame size={20} /> : 
+                                       session.type === 'Pull' ? <Anchor size={20} /> : 
+                                       session.type === 'Legs' ? <Zap size={20} /> :
+                                       <Settings size={20} />}
+                                  </div>
+                                  <div>
+                                      <h4 className="font-bold text-white">{session.title}</h4>
+                                      <p className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                                          <CalendarClock size={12} />
+                                          {session.date}
+                                      </p>
+                                      <div className="flex gap-3 mt-2">
+                                          <span className="text-xs text-emerald-400 font-medium bg-emerald-900/20 px-1.5 py-0.5 rounded">
+                                              {(calculateVolume(session)).toLocaleString()} kg
+                                          </span>
+                                           <span className="text-xs text-orange-400 font-medium bg-orange-900/20 px-1.5 py-0.5 rounded">
+                                              {formatDuration(session.startTime, session.endTime)}
+                                          </span>
+                                      </div>
                                   </div>
                               </div>
-                          );
-                      })}
-                  </div>
-              </div>
-
-              {/* Workout Distribution */}
-              <div className="bg-slate-800 rounded-2xl p-5 border border-slate-700 shadow-lg">
-                   <div className="flex items-center gap-2 mb-4">
-                      <BarChart3 size={20} className="text-purple-400" />
-                      <h2 className="text-base font-bold text-white">สัดส่วนการฝึก</h2>
-                  </div>
-                  <div className="space-y-3">
-                      <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                              <span className="text-slate-300">Push Day</span>
-                              <span className="text-slate-500">{pushCount} ครั้ง</span>
-                          </div>
-                          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                              <div className="h-full bg-red-500 rounded-full" style={{ width: `${totalWorkouts ? (pushCount/totalWorkouts)*100 : 0}%` }}></div>
-                          </div>
-                      </div>
-                      <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                              <span className="text-slate-300">Pull Day</span>
-                              <span className="text-slate-500">{pullCount} ครั้ง</span>
-                          </div>
-                          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                              <div className="h-full bg-blue-500 rounded-full" style={{ width: `${totalWorkouts ? (pullCount/totalWorkouts)*100 : 0}%` }}></div>
-                          </div>
-                      </div>
-                      <div className="space-y-1">
-                          <div className="flex justify-between text-xs">
-                              <span className="text-slate-300">Leg Day</span>
-                              <span className="text-slate-500">{legsCount} ครั้ง</span>
-                          </div>
-                          <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                              <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${totalWorkouts ? (legsCount/totalWorkouts)*100 : 0}%` }}></div>
-                          </div>
-                      </div>
-                      {customCount > 0 && (
-                        <div className="space-y-1">
-                            <div className="flex justify-between text-xs">
-                                <span className="text-slate-300">Custom</span>
-                                <span className="text-slate-500">{customCount} ครั้ง</span>
-                            </div>
-                            <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
-                                <div className="h-full bg-purple-500 rounded-full" style={{ width: `${totalWorkouts ? (customCount/totalWorkouts)*100 : 0}%` }}></div>
-                            </div>
-                        </div>
-                      )}
-                  </div>
-              </div>
-
-              <h2 className="text-lg font-bold text-white mt-4 mb-2 pl-1">ประวัติล่าสุด</h2>
-              
-              {history.map((session) => (
-                  <div key={session.id} className="bg-slate-800 rounded-xl p-4 border border-slate-700 shadow-sm hover:border-slate-600 transition-colors">
-                      <div className="flex justify-between items-start mb-2">
-                          <div>
-                              <div className="flex items-center gap-2">
-                                  <span className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                                      session.type === 'Push' ? 'bg-red-500' : 
-                                      session.type === 'Pull' ? 'bg-blue-500' : 
-                                      session.type === 'Legs' ? 'bg-emerald-500' : 'bg-purple-500'
-                                  }`}></span>
-                                  <h3 className="font-bold text-white line-clamp-1">{session.title}</h3>
-                              </div>
-                              <div className="flex items-center gap-2 text-slate-400 text-xs mt-1">
-                                  <span className="flex items-center gap-1"><CalendarClock size={10} /> {session.date}</span>
-                                  <span>•</span>
-                                  <span className="flex items-center gap-1"><Timer size={10} /> {formatDuration(session.startTime, session.endTime)}</span>
+                              <div className="flex gap-2">
+                                   <button 
+                                      onClick={() => editHistoryItem(session.id)}
+                                      className="p-2 text-slate-500 hover:text-blue-400 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors"
+                                  >
+                                      <Pencil size={16} />
+                                  </button>
+                                  <button 
+                                      onClick={() => requestDeleteItem(session.id)}
+                                      className="p-2 text-slate-500 hover:text-red-400 bg-slate-700/50 hover:bg-slate-700 rounded-lg transition-colors"
+                                  >
+                                      <Trash2 size={16} />
+                                  </button>
                               </div>
                           </div>
-                          
-                          <div className="flex gap-2">
-                              <button 
-                                  onClick={() => editHistoryItem(session.id)}
-                                  className="p-2 text-slate-500 hover:text-blue-400 hover:bg-slate-700 rounded-lg transition-colors"
-                              >
-                                  <Pencil size={16} />
-                              </button>
-                               <button 
-                                  onClick={() => requestDeleteItem(session.id)}
-                                  className="p-2 text-slate-500 hover:text-red-400 hover:bg-slate-700 rounded-lg transition-colors"
-                              >
-                                  <Trash2 size={16} />
-                              </button>
-                          </div>
-                      </div>
-                      
-                      <div className="mt-3 pt-3 border-t border-slate-700/50 flex justify-between items-center">
-                          <div className="text-xs text-slate-500">
-                             {session.exercises.reduce((acc, ex) => acc + ex.sets.filter(s=>s.completed).length, 0)} Sets Completed
-                          </div>
-                          <div className="text-sm font-mono font-bold text-emerald-400">
-                              {calculateVolume(session).toLocaleString()} kg
-                          </div>
-                      </div>
+                      ))}
                   </div>
-              ))}
+              </div>
           </div>
         )}
       </div>
     );
   };
 
-  const renderSelectionScreen = () => (
-    <div className="max-w-md mx-auto px-4 py-8 pb-24">
-      <div className="flex justify-between items-start mb-8">
-          <div>
-            <h1 className="text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-              REPx
-            </h1>
-            <p className="text-slate-400 text-xs mt-1">Ready for the pump, <span className="text-white font-bold">{userProfile?.displayName}</span>?</p>
-          </div>
-          <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden">
-             {userProfile?.avatarUrl ? (
-                <img src={userProfile.avatarUrl} alt="User Avatar" className="w-full h-full object-cover" />
-             ) : (
-                <User size={20} className="text-slate-400" />
-             )}
-          </div>
-      </div>
+  const renderWorkoutScreen = () => {
+    // If Summary is shown (Review Phase)
+    if (showSummary && activeSession) {
+      const volume = calculateVolume(activeSession);
+      const duration = formatDuration(activeSession.startTime, activeSession.endTime);
+      
+      // Filter only exercises that have at least one completed set
+      const playedExercises = activeSession.exercises.filter(ex => 
+          ex.sets.some(s => s.completed)
+      );
 
-      <div className="space-y-4">
-        <button onClick={() => startWorkout('Push')} className="w-full group relative overflow-hidden rounded-2xl p-6 text-left transition-all hover:scale-[1.02] active:scale-95 border border-slate-700 bg-slate-800 hover:border-red-500/50">
-          <div className="absolute inset-0 bg-gradient-to-r from-red-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative z-10 flex items-center justify-between">
-            <div>
-                <h2 className="text-2xl font-bold text-white mb-1">PUSH DAY</h2>
-                <p className="text-sm text-slate-400">อก • ไหล่ • หลังแขน</p>
-            </div>
-            <div className="bg-red-500/20 p-3 rounded-full text-red-400 shadow-lg shadow-red-900/20">
-                <Flame size={28} strokeWidth={2.5} />
-            </div>
-          </div>
-        </button>
+      return (
+        <div className="max-w-md mx-auto px-4 py-8 pb-32 animate-in slide-in-from-right duration-300">
+           <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-yellow-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg shadow-yellow-500/20 animate-bounce">
+                  <Trophy size={40} className="text-slate-900" strokeWidth={2.5} />
+              </div>
+              <h1 className="text-3xl font-extrabold text-white mb-2">ยอดเยี่ยมมาก!</h1>
+              <p className="text-slate-400">คุณทำสำเร็จไปอีกวันแล้ว</p>
+           </div>
 
-        <button onClick={() => startWorkout('Pull')} className="w-full group relative overflow-hidden rounded-2xl p-6 text-left transition-all hover:scale-[1.02] active:scale-95 border border-slate-700 bg-slate-800 hover:border-blue-500/50">
-          <div className="absolute inset-0 bg-gradient-to-r from-blue-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative z-10 flex items-center justify-between">
-            <div>
-                <h2 className="text-2xl font-bold text-white mb-1">PULL DAY</h2>
-                <p className="text-sm text-slate-400">หลัง • ไหล่หลัง • หน้าแขน</p>
-            </div>
-            <div className="bg-blue-500/20 p-3 rounded-full text-blue-400 shadow-lg shadow-blue-900/20">
-                <Anchor size={28} strokeWidth={2.5} />
-            </div>
-          </div>
-        </button>
+           <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
+                  <p className="text-xs text-slate-400 uppercase font-bold mb-1">เวลารวม</p>
+                  <p className="text-2xl font-bold text-white">{duration}</p>
+              </div>
+              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
+                  <p className="text-xs text-slate-400 uppercase font-bold mb-1">น้ำหนักรวม</p>
+                  <p className="text-2xl font-bold text-emerald-400">{(volume / 1000).toFixed(2)} <span className="text-sm text-slate-500">ตัน</span></p>
+              </div>
+           </div>
 
-        <button onClick={() => startWorkout('Legs')} className="w-full group relative overflow-hidden rounded-2xl p-6 text-left transition-all hover:scale-[1.02] active:scale-95 border border-slate-700 bg-slate-800 hover:border-emerald-500/50">
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative z-10 flex items-center justify-between">
-            <div>
-                <h2 className="text-2xl font-bold text-white mb-1">LEG DAY</h2>
-                <p className="text-sm text-slate-400">ขา • น่อง • ท้อง</p>
-            </div>
-            <div className="bg-emerald-500/20 p-3 rounded-full text-emerald-400 shadow-lg shadow-emerald-900/20">
-                <Zap size={28} strokeWidth={2.5} />
-            </div>
-          </div>
-        </button>
+           {/* Workout Details Summary */}
+           <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden mb-8">
+               <div className="bg-slate-700/50 p-3 border-b border-slate-700">
+                   <h3 className="font-bold text-white flex items-center gap-2 text-sm">
+                       <LayoutDashboard size={16} /> รายละเอียดการฝึก
+                   </h3>
+               </div>
+               <div className="p-4 space-y-4">
+                   {playedExercises.length > 0 ? playedExercises.map((ex, i) => (
+                       <div key={i} className="text-sm">
+                           <div className="flex justify-between items-center mb-1">
+                               <span className="font-bold text-slate-200">{ex.name}</span>
+                               <span className="text-xs text-slate-500 bg-slate-900 px-2 py-0.5 rounded-full">{ex.muscleGroup}</span>
+                           </div>
+                           <div className="space-y-1 pl-2 border-l-2 border-slate-700">
+                               {ex.sets.filter(s => s.completed).map((s, idx) => (
+                                   <div key={idx} className="flex justify-between text-xs text-slate-400">
+                                       <span>Set {s.setNumber}</span>
+                                       <span>{s.weight} kg × {s.reps} ครั้ง</span>
+                                   </div>
+                               ))}
+                           </div>
+                       </div>
+                   )) : (
+                       <p className="text-center text-slate-500 text-sm py-2">ไม่มีท่าที่เล่นจบเซ็ต</p>
+                   )}
+               </div>
+           </div>
 
-        {/* Custom Workout Button */}
-        <button onClick={() => startWorkout('Custom')} className="w-full group relative overflow-hidden rounded-2xl p-6 text-left transition-all hover:scale-[1.02] active:scale-95 border border-slate-700 bg-slate-800 hover:border-purple-500/50">
-          <div className="absolute inset-0 bg-gradient-to-r from-purple-900/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-          <div className="relative z-10 flex items-center justify-between">
-            <div>
-                <h2 className="text-2xl font-bold text-white mb-1">CUSTOM</h2>
-                <p className="text-sm text-slate-400">เลือกท่าเอง • อิสระ</p>
-            </div>
-            <div className="bg-purple-500/20 p-3 rounded-full text-purple-400 shadow-lg shadow-purple-900/20">
-                <Settings size={28} strokeWidth={2.5} />
-            </div>
-          </div>
-        </button>
-      </div>
-
-      <div className="mt-12 p-4 rounded-xl bg-slate-900/50 border border-slate-800 text-center">
-        <p className="text-sm text-slate-500 italic">"{quote}"</p>
-      </div>
-    </div>
-  );
-
-  const renderActiveSession = () => {
-    if (!activeSession) return null;
-
-    const completedSets = activeSession.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0);
-    const totalSets = activeSession.exercises.reduce((acc, ex) => acc + ex.sets.length, 0);
-    const progress = totalSets > 0 ? Math.round((completedSets / totalSets) * 100) : 0;
-
-    return (
-      <div className="pb-24">
-        {/* Header */}
-        <div className="sticky top-0 z-20 bg-slate-900/95 backdrop-blur border-b border-slate-800 px-4 py-3 shadow-xl">
-            <div className="flex items-center justify-between mb-2">
-                <button onClick={() => setActiveSession(null)} className="p-2 -ml-2 text-slate-400 hover:text-white">
-                    <ChevronLeft />
-                </button>
-                <div className="text-center">
-                    <h2 className="font-bold text-lg text-white">{activeSession.title}</h2>
-                    <p className="text-xs text-slate-400">{activeSession.date}</p>
-                </div>
-                <div className="w-8"></div> {/* Spacer */}
-            </div>
-            {/* Progress Bar */}
-            <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                <div 
-                    className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500"
-                    style={{ width: `${progress}%` }}
-                />
-            </div>
-            <div className="flex justify-between text-xs text-slate-400 mt-1">
-                <span>ความคืบหน้า</span>
-                <span>{progress}%</span>
-            </div>
+           <div className="flex gap-3">
+              <button 
+                onClick={resumeWorkout}
+                className="flex-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-4 rounded-xl transition-all"
+              >
+                กลับไปแก้ไข
+              </button>
+              <button 
+                onClick={saveWorkout}
+                className="flex-[2] bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-emerald-900/50 transition-all active:scale-95 flex items-center justify-center gap-2"
+              >
+                <Save size={20} />
+                บันทึกการฝึกซ้อม
+              </button>
+           </div>
         </div>
+      );
+    }
 
-        {/* Exercises List */}
-        <div className="px-4 py-6">
-            {activeSession.exercises.map(ex => (
-                <ExerciseCard 
-                  key={ex.id} 
-                  exercise={ex} 
-                  onUpdateSet={updateSet} 
-                  onUpdateName={updateExerciseName}
-                  onAddSet={addSetToExercise}
-                />
-            ))}
-            
-            {/* Add Exercise Button */}
-            <div className="mt-4">
-                <button 
-                    onClick={addExercise}
-                    className="w-full py-4 border-2 border-dashed border-slate-700 rounded-xl text-slate-400 hover:text-white hover:border-blue-500 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 active:scale-95"
-                >
-                    <Plus size={20} />
-                    <span className="font-medium">เพิ่มท่า</span>
-                </button>
+    // Active Session Screen
+    if (activeSession) {
+      return (
+        <div className="max-w-md mx-auto px-4 py-6 pb-24 animate-in fade-in duration-300">
+          <div className="flex items-center justify-between mb-6 sticky top-0 bg-slate-950/80 backdrop-blur-md py-4 z-30 -mx-4 px-4 border-b border-slate-800/50">
+            <div className="flex items-center gap-3">
+               <div className={`p-2 rounded-lg ${
+                   activeSession.type === 'Push' ? 'bg-red-500/20 text-red-500' : 
+                   activeSession.type === 'Pull' ? 'bg-blue-500/20 text-blue-500' : 
+                   activeSession.type === 'Legs' ? 'bg-green-500/20 text-green-500' :
+                   'bg-purple-500/20 text-purple-500'
+               }`}>
+                  {activeSession.type === 'Push' ? <Flame size={24} fill="currentColor" className="opacity-50" /> : 
+                   activeSession.type === 'Pull' ? <Anchor size={24} /> : 
+                   activeSession.type === 'Legs' ? <Zap size={24} fill="currentColor" className="opacity-50" /> :
+                   <Settings size={24} />}
+               </div>
+               <div>
+                   <h1 className="text-xl font-bold text-white leading-tight">{activeSession.title}</h1>
+                   <p className="text-xs text-slate-400 flex items-center gap-1">
+                       <CalendarClock size={12} /> {activeSession.date}
+                   </p>
+               </div>
             </div>
-        </div>
-
-        {/* Bottom Action */}
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900 border-t border-slate-800 flex justify-center gap-4 z-20">
             <button 
                 onClick={finishWorkout}
-                className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl shadow-lg shadow-emerald-900/50 transition-all active:scale-95"
+                className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-lg shadow-blue-900/30 transition-all active:scale-95"
             >
                 จบการฝึก
             </button>
+          </div>
+
+          <div className="space-y-1">
+            {activeSession.exercises.map(exercise => (
+              <ExerciseCard 
+                key={exercise.id} 
+                exercise={exercise} 
+                onUpdateSet={updateSet}
+                onUpdateName={updateExerciseName}
+                onAddSet={addSetToExercise}
+              />
+            ))}
+          </div>
+
+          <button 
+            onClick={addExercise}
+            className="w-full py-4 mt-6 border-2 border-dashed border-slate-700 rounded-2xl text-slate-400 hover:text-white hover:border-slate-500 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 font-medium"
+          >
+              <Plus size={20} /> เพิ่มท่าออกกำลังกาย
+          </button>
+          
+          {/* AI Coach Floating Button */}
+           <button 
+            onClick={() => setIsCoachOpen(true)}
+            className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-full flex items-center justify-center shadow-lg shadow-blue-900/50 hover:scale-110 transition-transform z-40 border border-white/10"
+          >
+            <MessageCircle size={28} className="text-white" />
+          </button>
+        </div>
+      );
+    }
+
+    // Program Selection Screen (Start Screen)
+    return (
+      <div className="max-w-md mx-auto px-6 py-10 flex flex-col min-h-[90vh] animate-in fade-in duration-500">
+        <div className="flex-1 flex flex-col justify-center">
+            <div className="text-center mb-10">
+                <div className="inline-block p-1 rounded-full bg-gradient-to-tr from-blue-500 via-purple-500 to-pink-500 mb-4">
+                    <div className="bg-slate-950 rounded-full p-1">
+                         {userProfile?.avatarUrl ? (
+                             <img src={userProfile.avatarUrl} alt="Avatar" className="w-20 h-20 rounded-full" />
+                         ) : (
+                             <div className="w-20 h-20 rounded-full bg-slate-900 flex items-center justify-center">
+                                 <User className="text-slate-500" />
+                             </div>
+                         )}
+                    </div>
+                </div>
+                <h1 className="text-4xl font-black text-white tracking-tight mb-2">REPx</h1>
+                <p className="text-slate-400 font-medium tracking-wide text-sm">SELECT YOUR WORKOUT</p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 w-full mb-8">
+            <button 
+                onClick={() => startWorkout('Push')}
+                className="group relative overflow-hidden bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-red-500/50 p-6 rounded-2xl transition-all duration-300 active:scale-95"
+            >
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Flame size={80} className="text-red-500" />
+                </div>
+                <div className="relative z-10 flex items-center gap-4">
+                    <div className="bg-red-500/20 p-3 rounded-xl text-red-500 group-hover:bg-red-500 group-hover:text-white transition-colors">
+                        <Flame size={32} fill="currentColor" className="opacity-70 group-hover:opacity-100" />
+                    </div>
+                    <div className="text-left">
+                        <h2 className="text-2xl font-bold text-white group-hover:text-red-400 transition-colors">PUSH</h2>
+                        <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Chest • Shoulders • Triceps</p>
+                    </div>
+                </div>
+            </button>
+
+            <button 
+                onClick={() => startWorkout('Pull')}
+                className="group relative overflow-hidden bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-blue-500/50 p-6 rounded-2xl transition-all duration-300 active:scale-95"
+            >
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Anchor size={80} className="text-blue-500" />
+                </div>
+                <div className="relative z-10 flex items-center gap-4">
+                    <div className="bg-blue-500/20 p-3 rounded-xl text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                        <Anchor size={32} />
+                    </div>
+                    <div className="text-left">
+                        <h2 className="text-2xl font-bold text-white group-hover:text-blue-400 transition-colors">PULL</h2>
+                         <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Back • Biceps • Rear Delt</p>
+                    </div>
+                </div>
+            </button>
+
+            <button 
+                onClick={() => startWorkout('Legs')}
+                className="group relative overflow-hidden bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-green-500/50 p-6 rounded-2xl transition-all duration-300 active:scale-95"
+            >
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Zap size={80} className="text-green-500" />
+                </div>
+                <div className="relative z-10 flex items-center gap-4">
+                    <div className="bg-green-500/20 p-3 rounded-xl text-green-500 group-hover:bg-green-500 group-hover:text-white transition-colors">
+                        <Zap size={32} fill="currentColor" className="opacity-70 group-hover:opacity-100" />
+                    </div>
+                    <div className="text-left">
+                        <h2 className="text-2xl font-bold text-white group-hover:text-green-400 transition-colors">LEGS</h2>
+                         <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Quads • Hamstrings • Calves</p>
+                    </div>
+                </div>
+            </button>
+
+            <button 
+                onClick={() => startWorkout('Custom')}
+                className="group relative overflow-hidden bg-slate-800 hover:bg-slate-700 border border-slate-700 hover:border-purple-500/50 p-6 rounded-2xl transition-all duration-300 active:scale-95"
+            >
+                 <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                    <Settings size={80} className="text-purple-500" />
+                </div>
+                <div className="relative z-10 flex items-center gap-4">
+                    <div className="bg-purple-500/20 p-3 rounded-xl text-purple-500 group-hover:bg-purple-500 group-hover:text-white transition-colors">
+                        <Settings size={32} />
+                    </div>
+                    <div className="text-left">
+                        <h2 className="text-2xl font-bold text-white group-hover:text-purple-400 transition-colors">CUSTOM</h2>
+                         <p className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Build Your Own Routine</p>
+                    </div>
+                </div>
+            </button>
+            </div>
+
+            <div className="mt-auto pt-8 border-t border-slate-800/50 text-center">
+                <p className="text-white text-lg font-medium italic mb-2">"{quote}"</p>
+                <p className="text-slate-500 text-xs uppercase tracking-widest font-bold">Motivation of the day</p>
+            </div>
         </div>
       </div>
     );
-  };
-
-  const renderSummary = () => {
-    if (!activeSession) return null;
-    
-    const totalVolume = calculateVolume(activeSession);
-    const totalSetsCompleted = activeSession.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0);
-    const durationText = formatDuration(activeSession.startTime, activeSession.endTime);
-
-    return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-6 bg-slate-900">
-            <div className="w-full max-w-md bg-slate-800 rounded-3xl p-6 border border-slate-700 shadow-2xl flex flex-col max-h-[90vh]">
-                <div className="text-center mb-6 flex-shrink-0">
-                    <div className="w-16 h-16 bg-emerald-500/20 rounded-full flex items-center justify-center mx-auto mb-3 text-emerald-400 border border-emerald-500/30">
-                        <Trophy size={32} />
-                    </div>
-                    <h2 className="text-2xl font-bold text-white">เก่งมาก!</h2>
-                    <p className="text-slate-400 text-sm">สรุปผลการฝึกซ้อมวันนี้</p>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2 mb-4 flex-shrink-0">
-                    <div className="bg-slate-900 p-3 rounded-xl border border-slate-700 text-center">
-                        <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Volume</p>
-                        <p className="text-lg font-bold text-white">{totalVolume.toLocaleString()} <span className="text-[10px] text-slate-500 font-normal">kg</span></p>
-                    </div>
-                    <div className="bg-slate-900 p-3 rounded-xl border border-slate-700 text-center">
-                        <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Sets</p>
-                        <p className="text-lg font-bold text-white">{totalSetsCompleted} <span className="text-[10px] text-slate-500 font-normal">sets</span></p>
-                    </div>
-                     <div className="bg-slate-900 p-3 rounded-xl border border-slate-700 text-center">
-                        <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Time</p>
-                        <p className="text-lg font-bold text-blue-400">{durationText}</p>
-                    </div>
-                </div>
-                
-                {/* Detailed Breakdown List */}
-                <div className="flex-1 overflow-y-auto pr-1 mb-4 space-y-3 custom-scrollbar">
-                    <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-700 pb-2">รายละเอียดการฝึก</h3>
-                    {activeSession.exercises.map(ex => {
-                        const completedSets = ex.sets.filter(s => s.completed);
-                        if (completedSets.length === 0) return null;
-
-                        return (
-                            <div key={ex.id} className="bg-slate-900/50 p-3 rounded-xl border border-slate-700/30">
-                                <div className="flex justify-between items-center mb-2">
-                                    <h4 className="font-bold text-slate-200 text-sm">{ex.name}</h4>
-                                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-900/20 text-emerald-400 border border-emerald-900/30">
-                                        {completedSets.length} sets
-                                    </span>
-                                </div>
-                                <div className="grid grid-cols-4 gap-2">
-                                    {completedSets.map((set) => (
-                                        <div key={set.id} className="bg-slate-800 p-1.5 rounded text-center border border-slate-700">
-                                            <div className="text-[10px] text-slate-500 mb-0.5">Set {set.setNumber}</div>
-                                            <div className="text-xs font-mono text-white">
-                                                <span className="font-bold">{set.weight || 0}</span>
-                                                <span className="text-slate-500 mx-0.5">×</span>
-                                                <span>{set.reps || 0}</span>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        );
-                    })}
-                    {activeSession.exercises.every(ex => ex.sets.filter(s => s.completed).length === 0) && (
-                        <div className="text-center text-slate-500 py-4 text-sm">
-                            ไม่มีท่าที่เล่นจบสมบูรณ์
-                        </div>
-                    )}
-                </div>
-
-                <div className="flex flex-col gap-3 w-full flex-shrink-0">
-                    <button 
-                        onClick={saveWorkout}
-                        className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-emerald-900/50 flex justify-center items-center gap-2"
-                    >
-                        <Trophy size={18} />
-                        ยืนยันและบันทึก
-                    </button>
-                    
-                    <button 
-                        onClick={resumeWorkout}
-                        className="w-full bg-slate-700 hover:bg-slate-600 text-slate-300 font-medium py-3 rounded-xl transition-all"
-                    >
-                        กลับไปแก้ไข
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-  };
-
-  const renderContent = () => {
-    // If not logged in, show login screen
-    if (!userProfile) return renderLoginScreen();
-
-    if (showSummary) return renderSummary();
-    if (activeSession) return renderActiveSession();
-    
-    if (activeTab === 'dashboard') return renderDashboard();
-    if (activeTab === 'profile') return renderProfileScreen();
-    return renderSelectionScreen();
   };
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30">
-      {renderContent()}
-      {renderBottomNav()}
-      
-      {/* AI Coach FAB - Only show on main screens, not summary or login */}
-      {userProfile && !showSummary && !activeSession && (
-        <button 
-            onClick={() => setIsCoachOpen(true)}
-            className="fixed bottom-20 right-6 z-30 bg-blue-600 hover:bg-blue-500 text-white p-4 rounded-full shadow-xl shadow-blue-900/50 transition-all hover:scale-110 active:scale-95 flex items-center justify-center"
-        >
-            <MessageCircle size={24} />
-            <span className="absolute -top-1 -right-1 flex h-3 w-3">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-sky-500"></span>
-            </span>
-        </button>
-      )}
-      
-      {/* AI Coach FAB - Adjusted position for active session to avoid "Complete" button overlap */}
-      {activeSession && !showSummary && (
-         <button 
-            onClick={() => setIsCoachOpen(true)}
-            className="fixed bottom-24 right-6 z-30 bg-slate-800 border border-slate-600 text-blue-400 p-3 rounded-full shadow-lg transition-all hover:bg-slate-700 active:scale-95"
-        >
-            <MessageCircle size={24} />
-        </button>
-      )}
-
-      <AICoachModal isOpen={isCoachOpen} onClose={() => setIsCoachOpen(false)} />
-      
-      <ConfirmModal 
-        isOpen={confirmModal.isOpen}
-        title={confirmModal.title}
-        message={confirmModal.message}
-        onConfirm={confirmModal.onConfirm}
-        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
-        isDangerous={confirmModal.isDangerous}
-        confirmText={confirmModal.confirmText}
-        cancelText={confirmModal.cancelText}
-      />
+        {!userProfile ? (
+            renderLoginScreen()
+        ) : (
+            <>
+                <div className="mx-auto w-full max-w-md bg-slate-950 min-h-screen shadow-2xl overflow-hidden relative">
+                    {activeTab === 'workout' && renderWorkoutScreen()}
+                    {activeTab === 'dashboard' && renderDashboard()}
+                    {activeTab === 'profile' && renderProfileScreen()}
+                    
+                    {renderBottomNav()}
+                    
+                    <AICoachModal isOpen={isCoachOpen} onClose={() => setIsCoachOpen(false)} />
+                    
+                    <ConfirmModal 
+                        isOpen={confirmModal.isOpen}
+                        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+                        {...confirmModal}
+                    />
+                </div>
+            </>
+        )}
     </div>
   );
 };

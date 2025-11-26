@@ -994,7 +994,29 @@ const App = () => {
     );
   };
 
-  const renderProfile = () => (
+  const renderProfile = () => {
+    // Calculate BMI
+    const bmiValue = (() => {
+        const w = parseFloat(userProfile?.weight || '0');
+        const h = parseFloat(userProfile?.height || '0');
+        if (w > 0 && h > 0) {
+            return (w / ((h/100) * (h/100))).toFixed(1);
+        }
+        return '0.0';
+    })();
+    
+    // Determine Category
+    const bmiCategory = (() => {
+        const bmi = parseFloat(bmiValue);
+        if (bmi === 0) return { label: '-', color: 'text-slate-500' };
+        if (bmi < 18.5) return { label: 'ผอม', color: 'text-blue-400' };
+        if (bmi < 23) return { label: 'สมส่วน', color: 'text-emerald-400' };
+        if (bmi < 25) return { label: 'ท้วม', color: 'text-yellow-400' };
+        if (bmi < 30) return { label: 'อ้วน', color: 'text-orange-400' };
+        return { label: 'อ้วนมาก', color: 'text-red-400' };
+    })();
+
+    return (
       <div className="p-6 pb-24 max-w-md mx-auto animate-in fade-in duration-500">
           <h1 className="text-2xl font-bold text-white mb-6">โปรไฟล์</h1>
           
@@ -1036,18 +1058,23 @@ const App = () => {
               </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-4 mb-8">
+          <div className="grid grid-cols-2 gap-4 mb-8">
               <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
                   <p className="text-slate-400 text-xs mb-1">อายุ</p>
                   <p className="text-xl font-bold text-white">{userProfile?.age} <span className="text-xs font-normal text-slate-500">ปี</span></p>
               </div>
               <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
+                  <p className="text-slate-400 text-xs mb-1">ส่วนสูง</p>
+                  <p className="text-xl font-bold text-white">{userProfile?.height} <span className="text-xs font-normal text-slate-500">cm</span></p>
+              </div>
+               <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
                   <p className="text-slate-400 text-xs mb-1">น้ำหนัก</p>
                   <p className="text-xl font-bold text-white">{userProfile?.weight} <span className="text-xs font-normal text-slate-500">kg</span></p>
               </div>
-              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
-                  <p className="text-slate-400 text-xs mb-1">ส่วนสูง</p>
-                  <p className="text-xl font-bold text-white">{userProfile?.height} <span className="text-xs font-normal text-slate-500">cm</span></p>
+              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center relative overflow-hidden">
+                  <p className="text-slate-400 text-xs mb-1">BMI</p>
+                  <p className={`text-xl font-bold ${bmiCategory.color}`}>{bmiValue}</p>
+                  <p className={`text-[10px] ${bmiCategory.color} opacity-80 font-medium mt-0.5`}>{bmiCategory.label}</p>
               </div>
           </div>
 
@@ -1059,7 +1086,8 @@ const App = () => {
               ออกจากระบบ
           </button>
       </div>
-  );
+    );
+  };
 
   if (!userProfile) {
     return renderLoginScreen();

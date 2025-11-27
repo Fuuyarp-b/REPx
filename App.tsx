@@ -1,6 +1,6 @@
 
 import { useState, useEffect } from 'react';
-import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Check } from 'lucide-react';
+import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Check, Calendar } from 'lucide-react';
 import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile } from './types';
 import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES, PRESET_AVATARS } from './constants';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -12,6 +12,7 @@ const App = () => {
   // State
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
+  const [viewingSession, setViewingSession] = useState<WorkoutSession | null>(null); // New state for viewing history details
   const [history, setHistory] = useState<WorkoutSession[]>([]);
   const [isCoachOpen, setIsCoachOpen] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
@@ -59,11 +60,11 @@ const App = () => {
 
   // Randomize quote when returning to selection screen
   useEffect(() => {
-    if (!activeSession && !showSummary && activeTab === 'workout') {
+    if (!activeSession && !showSummary && !viewingSession && activeTab === 'workout') {
       const randomIndex = Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length);
       setQuote(MOTIVATIONAL_QUOTES[randomIndex]);
     }
-  }, [activeSession, showSummary, activeTab]);
+  }, [activeSession, showSummary, viewingSession, activeTab]);
 
   const fetchUserProfile = async (username: string) => {
       if (!isSupabaseConfigured) return;
@@ -880,6 +881,110 @@ const App = () => {
     );
   };
 
+  const renderHistoryDetail = () => {
+    if (!viewingSession) return null;
+    
+    // Calculate stats specifically for this viewing session
+    const totalVolume = calculateTotalVolume(viewingSession.exercises);
+    const duration = formatDuration(viewingSession.startTime, viewingSession.endTime);
+    // Filter only exercises that had activity
+    const playedExercises = viewingSession.exercises.filter(ex => ex.sets.some(s => s.completed));
+
+    return (
+        <div className="p-6 pb-24 max-w-md mx-auto animate-in slide-in-from-right duration-300">
+            {/* Header */}
+            <div className="flex items-center gap-3 mb-6">
+                <button 
+                    onClick={() => setViewingSession(null)}
+                    className="p-2 -ml-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
+                >
+                    <ChevronLeft size={24} />
+                </button>
+                <div>
+                    <h1 className="text-xl font-bold text-white">รายละเอียดการฝึก</h1>
+                    <p className="text-slate-400 text-xs flex items-center gap-2 mt-0.5">
+                        <Calendar size={12} /> {viewingSession.date}
+                    </p>
+                </div>
+            </div>
+
+            {/* Session Info Card */}
+            <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 mb-6 flex justify-between items-center">
+                 <div className="flex items-center gap-4">
+                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                        viewingSession.type === 'Push' ? 'bg-red-900/20 text-red-500' :
+                        viewingSession.type === 'Pull' ? 'bg-blue-900/20 text-blue-500' :
+                        viewingSession.type === 'Legs' ? 'bg-emerald-900/20 text-emerald-500' :
+                        'bg-purple-900/20 text-purple-500'
+                    }`}>
+                        {viewingSession.type === 'Push' ? <Flame size={24} /> :
+                         viewingSession.type === 'Pull' ? <Anchor size={24} /> :
+                         viewingSession.type === 'Legs' ? <Zap size={24} /> :
+                         <Settings size={24} />}
+                    </div>
+                    <div>
+                        <h2 className="text-lg font-bold text-white">{viewingSession.title}</h2>
+                        <p className="text-slate-400 text-xs">{viewingSession.type}</p>
+                    </div>
+                 </div>
+            </div>
+
+            {/* Stats Grid */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700">
+                    <div className="flex items-center gap-2 mb-2 text-slate-400 text-xs uppercase tracking-wider">
+                        <Timer size={14} /> เวลาที่ใช้
+                    </div>
+                    <p className="text-2xl font-bold text-white">{duration}</p>
+                </div>
+                <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700">
+                     <div className="flex items-center gap-2 mb-2 text-slate-400 text-xs uppercase tracking-wider">
+                        <Dumbbell size={14} /> น้ำหนักรวม
+                    </div>
+                    <p className="text-2xl font-bold text-blue-400">{(totalVolume).toLocaleString()} <span className="text-sm text-slate-500">kg</span></p>
+                </div>
+            </div>
+
+            {/* Exercises List */}
+            <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
+                <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm">
+                    <BarChart3 size={18} className="text-slate-400"/> รายการท่าที่เล่น
+                </h3>
+                <div className="space-y-6">
+                    {playedExercises.length === 0 ? (
+                        <p className="text-slate-500 text-center text-sm py-4">ไม่มีข้อมูลการเล่นในรายการนี้</p>
+                    ) : (
+                        playedExercises.map((ex, idx) => (
+                            <div key={idx} className="border-b border-slate-700 last:border-0 pb-4 last:pb-0">
+                                <div className="flex justify-between items-start mb-3">
+                                    <h4 className="text-slate-200 font-bold text-sm">{ex.name}</h4>
+                                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
+                                        ex.muscleGroup === 'Chest' ? 'bg-red-900/30 text-red-400' :
+                                        ex.muscleGroup === 'Back' ? 'bg-blue-900/30 text-blue-400' :
+                                        ex.muscleGroup === 'Legs' ? 'bg-green-900/30 text-green-400' :
+                                        'bg-slate-700 text-slate-300'
+                                    }`}>
+                                        {ex.muscleGroup}
+                                    </span>
+                                </div>
+                                <div className="grid grid-cols-3 gap-2">
+                                    {ex.sets.filter(s => s.completed).map((s, sIdx) => (
+                                        <div key={sIdx} className="bg-slate-900 rounded-lg p-2 border border-slate-700 flex flex-col items-center">
+                                            <span className="text-[10px] text-slate-500 font-bold mb-0.5">SET {sIdx + 1}</span>
+                                            <span className="text-white font-bold text-sm">{s.weight} <span className="text-[10px] text-slate-500 font-normal">kg</span></span>
+                                            <span className="text-xs text-slate-400">x {s.reps}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+  };
+
   const renderDashboard = () => {
     const filteredHistory = getFilteredHistory();
     const totalSessions = filteredHistory.length;
@@ -987,7 +1092,11 @@ const App = () => {
         ) : (
             <div className="space-y-3">
                 {filteredHistory.map((session) => (
-                    <div key={session.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center group hover:border-blue-500/30 transition-colors">
+                    <div 
+                        key={session.id} 
+                        onClick={() => setViewingSession(session)} // Make item clickable
+                        className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center group hover:border-blue-500/50 cursor-pointer transition-colors active:scale-98"
+                    >
                         <div className="flex items-center gap-4">
                             <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                                 session.type === 'Push' ? 'bg-red-900/20 text-red-500' :
@@ -1009,15 +1118,21 @@ const App = () => {
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                              <button 
-                                onClick={() => resumeHistorySession(session)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    resumeHistorySession(session);
+                                }}
                                 className="p-2 bg-slate-700 text-slate-400 rounded-lg hover:bg-blue-600 hover:text-white transition-colors"
                             >
                                 <Pencil size={16} />
                             </button>
                             <button 
-                                onClick={() => deleteHistoryItem(session.id)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteHistoryItem(session.id);
+                                }}
                                 className="p-2 bg-slate-700 text-slate-400 rounded-lg hover:bg-red-600 hover:text-white transition-colors"
                             >
                                 <Trash2 size={16} />
@@ -1135,13 +1250,14 @@ const App = () => {
       
       {activeSession && !showSummary ? renderActiveSession() :
        showSummary ? renderSummary() :
+       viewingSession ? renderHistoryDetail() :
        activeTab === 'workout' ? renderSelectionScreen() :
        activeTab === 'dashboard' ? renderDashboard() :
        renderProfile()
       }
 
       {/* Bottom Navigation */}
-      {!activeSession && !showSummary && (
+      {!activeSession && !showSummary && !viewingSession && (
           <div className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 p-4 pb-6 z-50">
               <div className="flex justify-around max-w-md mx-auto">
                   <button 

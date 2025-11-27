@@ -883,7 +883,14 @@ const App = () => {
   const renderDashboard = () => {
     const filteredHistory = getFilteredHistory();
     const totalSessions = filteredHistory.length;
-    const totalVolume = filteredHistory.reduce((acc, session) => acc + calculateTotalVolume(session.exercises), 0);
+    // Calculate total duration in minutes
+    const totalMinutes = filteredHistory.reduce((acc, session) => {
+        if (session.startTime && session.endTime) {
+            return acc + Math.floor((session.endTime - session.startTime) / 60000);
+        }
+        return acc;
+    }, 0);
+
     const pushCount = filteredHistory.filter(s => s.type === 'Push').length;
     const pullCount = filteredHistory.filter(s => s.type === 'Pull').length;
     const legsCount = filteredHistory.filter(s => s.type === 'Legs').length;
@@ -931,10 +938,17 @@ const App = () => {
                 <p className="text-slate-500 text-xs mt-1">ครั้ง</p>
             </div>
             <div className="bg-gradient-to-br from-purple-900/40 to-slate-900 border border-purple-500/20 p-4 rounded-2xl relative overflow-hidden">
-                 <div className="absolute top-0 right-0 p-3 opacity-10"><Dumbbell size={40} /></div>
-                <p className="text-purple-400 text-xs font-bold uppercase tracking-wider mb-1">น้ำหนักรวม</p>
-                <p className="text-3xl font-bold text-white">{(totalVolume/1000).toFixed(1)}k</p>
-                <p className="text-slate-500 text-xs mt-1">กิโลกรัม</p>
+                 <div className="absolute top-0 right-0 p-3 opacity-10"><Timer size={40} /></div>
+                <p className="text-purple-400 text-xs font-bold uppercase tracking-wider mb-1">เวลาฝึกรวม</p>
+                <p className="text-3xl font-bold text-white">
+                    {totalMinutes < 60 
+                        ? totalMinutes 
+                        : (totalMinutes / 60).toFixed(1)
+                    }
+                </p>
+                <p className="text-slate-500 text-xs mt-1">
+                    {totalMinutes < 60 ? 'นาที' : 'ชั่วโมง'}
+                </p>
             </div>
         </div>
 

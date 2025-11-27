@@ -44,7 +44,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onUpdateSe
   return (
     <div className="bg-slate-800 rounded-xl p-4 mb-4 border border-slate-700 shadow-lg">
       <div className="flex justify-between items-start mb-4">
-        <div className="flex-1 mr-4">
+        <div className="flex-1">
             {isEditingName ? (
                 <div className="flex items-center gap-2 mb-1">
                     <input 
@@ -75,14 +75,6 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onUpdateSe
             )}
             <p className="text-sm text-slate-400">{exercise.targetSets} Sets × {exercise.targetReps} Reps</p>
         </div>
-        <span className={`text-xs px-2 py-1 rounded-full font-medium whitespace-nowrap ${
-            exercise.muscleGroup === 'Chest' ? 'bg-red-900/30 text-red-400 border border-red-900/50' :
-            exercise.muscleGroup === 'Back' ? 'bg-blue-900/30 text-blue-400 border border-blue-900/50' :
-            exercise.muscleGroup === 'Legs' ? 'bg-green-900/30 text-green-400 border border-green-900/50' :
-            'bg-slate-700 text-slate-300'
-        }`}>
-            {exercise.muscleGroup}
-        </span>
       </div>
       
       {exercise.note && (

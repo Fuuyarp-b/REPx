@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Check, Calendar } from 'lucide-react';
 import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile } from './types';
@@ -956,16 +955,8 @@ const App = () => {
                     ) : (
                         playedExercises.map((ex, idx) => (
                             <div key={idx} className="border-b border-slate-700 last:border-0 pb-4 last:pb-0">
-                                <div className="flex justify-between items-start mb-3">
+                                <div className="mb-3">
                                     <h4 className="text-slate-200 font-bold text-sm">{ex.name}</h4>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded font-medium ${
-                                        ex.muscleGroup === 'Chest' ? 'bg-red-900/30 text-red-400' :
-                                        ex.muscleGroup === 'Back' ? 'bg-blue-900/30 text-blue-400' :
-                                        ex.muscleGroup === 'Legs' ? 'bg-green-900/30 text-green-400' :
-                                        'bg-slate-700 text-slate-300'
-                                    }`}>
-                                        {ex.muscleGroup}
-                                    </span>
                                 </div>
                                 <div className="grid grid-cols-3 gap-2">
                                     {ex.sets.filter(s => s.completed).map((s, sIdx) => (

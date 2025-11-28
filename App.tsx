@@ -356,6 +356,27 @@ const App = () => {
     });
   };
 
+  const removeExercise = (exerciseId: string) => {
+      setConfirmModal({
+          isOpen: true,
+          title: 'ลบท่าออกกำลังกาย',
+          message: 'คุณต้องการลบท่านี้ออกจากตารางฝึกใช่หรือไม่?',
+          confirmText: 'ลบ',
+          cancelText: 'ยกเลิก',
+          isDangerous: true,
+          onConfirm: () => {
+               setActiveSession(prev => {
+                  if (!prev) return null;
+                  return {
+                      ...prev,
+                      exercises: prev.exercises.filter(ex => ex.id !== exerciseId)
+                  };
+              });
+              setConfirmModal(prev => ({ ...prev, isOpen: false }));
+          }
+      });
+  };
+
   const updateSet = (exerciseId: string, updatedSet: WorkoutSet) => {
     if (!activeSession) return;
 
@@ -788,6 +809,7 @@ const App = () => {
                 onUpdateSet={updateSet}
                 onUpdateName={updateExerciseName}
                 onAddSet={addSetToExercise}
+                onRemove={removeExercise}
             />
             ))}
             

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Pencil, Check, X, Plus } from 'lucide-react';
+import { Pencil, Check, X, Plus, Trash2 } from 'lucide-react';
 import { Exercise, WorkoutSet } from '../types';
 
 interface ExerciseCardProps {
@@ -7,9 +7,10 @@ interface ExerciseCardProps {
   onUpdateSet: (exerciseId: string, set: WorkoutSet) => void;
   onUpdateName: (exerciseId: string, newName: string) => void;
   onAddSet: (exerciseId: string) => void;
+  onRemove: (exerciseId: string) => void;
 }
 
-export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onUpdateSet, onUpdateName, onAddSet }) => {
+export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onUpdateSet, onUpdateName, onAddSet, onRemove }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(exercise.name);
 
@@ -75,6 +76,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onUpdateSe
             )}
             <p className="text-sm text-slate-400">{exercise.targetSets} Sets × {exercise.targetReps} Reps</p>
         </div>
+        {!isEditingName && (
+            <button 
+                onClick={() => onRemove(exercise.id)}
+                className="text-slate-600 hover:text-red-500 transition-colors p-1 -mr-1"
+                title="ลบท่าออกกำลังกาย"
+            >
+                <Trash2 size={18} />
+            </button>
+        )}
       </div>
       
       {exercise.note && (

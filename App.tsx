@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Check, Calendar } from 'lucide-react';
+import { useState, useEffect, useMemo } from 'react';
+import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Check, Calendar, ChevronDown } from 'lucide-react';
 import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile } from './types';
 import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES, PRESET_AVATARS } from './constants';
 import { ExerciseCard } from './components/ExerciseCard';
@@ -7,11 +7,29 @@ import { AICoachModal } from './components/AICoachModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
 
+// Helper functions moved outside component to avoid scope/hoisting issues
+const calculateTotalVolume = (exercises: Exercise[]) => {
+  return exercises.reduce((total, ex) => {
+    return total + ex.sets.reduce((setTotal, set) => {
+      if (set.completed && typeof set.weight === 'number' && typeof set.reps === 'number') {
+        return setTotal + (set.weight * set.reps);
+      }
+      return setTotal;
+    }, 0);
+  }, 0);
+};
+
+const formatDuration = (start?: number, end?: number) => {
+  if (!start || !end) return '0 นาที';
+  const minutes = Math.floor((end - start) / 60000);
+  return `${minutes} นาที`;
+};
+
 const App = () => {
   // State
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
-  const [viewingSession, setViewingSession] = useState<WorkoutSession | null>(null); // New state for viewing history details
+  const [viewingSession, setViewingSession] = useState<WorkoutSession | null>(null); 
   const [history, setHistory] = useState<WorkoutSession[]>([]);
   const [isCoachOpen, setIsCoachOpen] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
@@ -19,7 +37,7 @@ const App = () => {
   const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isLoginMode, setIsLoginMode] = useState(false); // Toggle between Register and Login
+  const [isLoginMode, setIsLoginMode] = useState(false);
   const [filterRange, setFilterRange] = useState<'all' | 'day' | 'week' | 'month' | 'year'>('all');
   
   // Login Form State
@@ -41,6 +59,19 @@ const App = () => {
     onConfirm: () => {},
     isDangerous: false
   });
+
+  // Get unique exercises from history for suggestions
+  const suggestedExercises = useMemo(() => {
+    const unique = new Map<string, { name: string; muscleGroup: any }>();
+    history.forEach(session => {
+        session.exercises.forEach(ex => {
+            if (!unique.has(ex.name)) {
+                unique.set(ex.name, { name: ex.name, muscleGroup: ex.muscleGroup });
+            }
+        });
+    });
+    return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [history]);
 
   // Initialize - Check for local session
   useEffect(() => {
@@ -84,7 +115,6 @@ const App = () => {
                   avatarUrl: data.avatar_url || PRESET_AVATARS[0]
               });
           } else {
-              // Handle case where local storage has username but DB doesn't (cleared DB)
               localStorage.removeItem('repx_username');
           }
       } catch (error) {
@@ -109,7 +139,7 @@ const App = () => {
       if (data) {
         const loadedHistory = data.map((item: any) => ({
             ...item.data,
-            id: item.id // Ensure ID matches DB ID
+            id: item.id
         }));
         setHistory(loadedHistory);
       }
@@ -135,7 +165,7 @@ const App = () => {
 
     try {
         if (isLoginMode) {
-            // --- LOGIN MODE: Check existing user ---
+            // --- LOGIN MODE ---
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
@@ -161,7 +191,7 @@ const App = () => {
             setUserProfile(profile);
 
         } else {
-            // --- REGISTER MODE: Create new user ---
+            // --- REGISTER MODE ---
             if (!loginForm.displayName) {
                 alert("กรุณากรอกชื่อเล่น");
                 setIsLoggingIn(false);
@@ -211,7 +241,6 @@ const App = () => {
 
     } catch (error: any) {
         console.error("Login failed:", error);
-        // Handle specific RLS error nicely
         if (error.message?.includes('row-level security')) {
             alert("เกิดข้อผิดพลาด: ไม่สามารถบันทึกข้อมูลได้เนื่องจากติดสิทธิ์ความปลอดภัย (RLS) กรุณาแจ้งผู้ดูแลระบบให้รันไฟล์ 'supabase_setup.sql'");
         } else {
@@ -235,7 +264,7 @@ const App = () => {
               setUserProfile(null);
               setHistory([]);
               setLoginForm({ username: '', displayName: '', age: '', weight: '', height: '', avatarUrl: PRESET_AVATARS[0] });
-              setIsLoginMode(true); // Default to login screen on logout
+              setIsLoginMode(true);
               setConfirmModal(prev => ({ ...prev, isOpen: false }));
           }
       });
@@ -297,23 +326,22 @@ const App = () => {
   };
 
   const resumeHistorySession = (session: WorkoutSession) => {
-      // Create a copy of the history session to be active
       const newSession = JSON.parse(JSON.stringify(session));
-      newSession.id = session.id; // Keep ID to update existing record
+      newSession.id = session.id; 
       newSession.status = 'active';
-      newSession.startTime = Date.now(); // Reset timer for the editing session? Or keep? Let's reset for duration tracking of this "edit"
+      newSession.startTime = Date.now(); 
       delete newSession.endTime;
       
       setActiveSession(newSession);
       setActiveTab('workout');
   };
 
-  const addExercise = () => {
+  const addExercise = (templateName?: string, templateMuscleGroup?: any) => {
     if (!activeSession) return;
     const newExercise: Exercise = {
         id: crypto.randomUUID(),
-        name: 'New Exercise',
-        muscleGroup: 'Chest', // Default
+        name: templateName || 'New Exercise',
+        muscleGroup: templateMuscleGroup || 'Chest', 
         targetSets: 3,
         targetReps: '10',
         sets: createSets(3)
@@ -402,7 +430,6 @@ const App = () => {
       status: 'completed',
     };
 
-    // Save to Supabase
     if (isSupabaseConfigured) {
         try {
             const { error } = await supabase
@@ -410,22 +437,19 @@ const App = () => {
                 .upsert({
                     id: completedSession.id,
                     user_id: userProfile.username,
-                    data: completedSession, // Store full JSON
+                    data: completedSession, 
                     created_at: new Date().toISOString()
                 });
 
             if (error) throw error;
-            
-            // Reload history to ensure sync
             fetchHistory(userProfile.username);
 
         } catch (error: any) {
             console.error("Save error:", error);
             alert(`บันทึกไม่สำเร็จ: ${error.message}`);
-            return; // Don't close if save failed
+            return; 
         }
     } else {
-        // Fallback for offline/no-db demo
         setHistory(prev => [completedSession, ...prev]);
     }
 
@@ -479,15 +503,13 @@ const App = () => {
       setHistory(prev => prev.filter(item => item.id !== sessionId));
   };
 
-  // -- Render Helpers --
-
   // Filter History Logic
   const getFilteredHistory = () => {
       const now = new Date();
       return history.filter(session => {
           if (!session.endTime && !session.date) return false;
           
-          const compareDate = session.startTime ? new Date(session.startTime) : new Date(); // Fallback
+          const compareDate = session.startTime ? new Date(session.startTime) : new Date(); 
 
           const diffTime = Math.abs(now.getTime() - compareDate.getTime());
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
@@ -502,27 +524,10 @@ const App = () => {
       });
   };
 
-  const calculateTotalVolume = (exercises: Exercise[]) => {
-    return exercises.reduce((total, ex) => {
-      return total + ex.sets.reduce((setTotal, set) => {
-        if (set.completed && typeof set.weight === 'number' && typeof set.reps === 'number') {
-          return setTotal + (set.weight * set.reps);
-        }
-        return setTotal;
-      }, 0);
-    }, 0);
-  };
+  // --- Render Functions ---
 
-  const formatDuration = (start?: number, end?: number) => {
-      if (!start || !end) return '0 นาที';
-      const minutes = Math.floor((end - start) / 60000);
-      return `${minutes} นาที`;
-  };
-
-  // --- Login Screen ---
   const renderLoginScreen = () => (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        {/* Background Effects */}
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/20 rounded-full blur-[100px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[100px]" />
 
@@ -538,7 +543,6 @@ const App = () => {
             </div>
 
             <div className="space-y-4">
-                {/* Toggle Header */}
                 <div className="flex bg-slate-900/50 p-1 rounded-xl mb-6 border border-slate-700">
                     <button 
                         onClick={() => setIsLoginMode(false)}
@@ -554,7 +558,6 @@ const App = () => {
                     </button>
                 </div>
 
-                {/* Avatar Selection (Register Only) */}
                 {!isLoginMode && (
                     <div className="mb-6">
                         <label className="text-xs text-slate-400 mb-2 block text-center">เลือกตัวละครของคุณ</label>
@@ -582,7 +585,6 @@ const App = () => {
                     </div>
                 )}
 
-                {/* Username */}
                 <div>
                     <label className="text-xs font-medium text-slate-400 ml-1">ชื่อผู้ใช้ (Username)</label>
                     <input 
@@ -594,7 +596,6 @@ const App = () => {
                     />
                 </div>
 
-                {/* Register Fields */}
                 {!isLoginMode && (
                     <>
                         <div>
@@ -635,8 +636,6 @@ const App = () => {
         </div>
     </div>
   );
-
-  // --- Main App Screens ---
 
   const renderSelectionScreen = () => (
     <div className="p-4 pb-24 max-w-md mx-auto animate-in fade-in duration-500">
@@ -792,13 +791,43 @@ const App = () => {
             />
             ))}
             
-            <button
-                onClick={addExercise}
-                className="w-full py-4 rounded-xl border-2 border-dashed border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 hover:bg-slate-800 transition-all flex items-center justify-center gap-2 mb-8"
-            >
-                <Plus size={20} />
-                เพิ่มท่าออกกำลังกาย
-            </button>
+            <div className="mt-6 mb-8">
+                {suggestedExercises.length > 0 && (
+                    <div className="mb-3">
+                         <div className="relative">
+                            <select
+                                className="w-full bg-slate-800 text-white border border-slate-700 rounded-xl px-4 py-3 appearance-none focus:outline-none focus:border-blue-500 text-sm"
+                                onChange={(e) => {
+                                    if (e.target.value) {
+                                        const selected = suggestedExercises.find(ex => ex.name === e.target.value);
+                                        if (selected) {
+                                            addExercise(selected.name, selected.muscleGroup);
+                                            e.target.value = ""; 
+                                        }
+                                    }
+                                }}
+                                defaultValue=""
+                            >
+                                <option value="" disabled>+ เลือกท่าจากประวัติการฝึก...</option>
+                                {suggestedExercises.map((ex, idx) => (
+                                    <option key={idx} value={ex.name}>{ex.name}</option>
+                                ))}
+                            </select>
+                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                                <ChevronDown size={16} />
+                            </div>
+                         </div>
+                    </div>
+                )}
+
+                <button
+                    onClick={() => addExercise()}
+                    className="w-full py-4 rounded-xl border-2 border-dashed border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                >
+                    <Plus size={20} />
+                    เพิ่มท่าออกกำลังกายใหม่
+                </button>
+            </div>
         </div>
       </div>
     );
@@ -1085,7 +1114,7 @@ const App = () => {
                 {filteredHistory.map((session) => (
                     <div 
                         key={session.id} 
-                        onClick={() => setViewingSession(session)} // Make item clickable
+                        onClick={() => setViewingSession(session)} 
                         className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center group hover:border-blue-500/50 cursor-pointer transition-colors active:scale-98"
                     >
                         <div className="flex items-center gap-4">
@@ -1139,25 +1168,22 @@ const App = () => {
 
   const renderProfile = () => {
     // Calculate BMI
-    const bmiValue = (() => {
-        const w = parseFloat(userProfile?.weight || '0');
-        const h = parseFloat(userProfile?.height || '0');
-        if (w > 0 && h > 0) {
-            return (w / ((h/100) * (h/100))).toFixed(1);
-        }
-        return '0.0';
-    })();
+    const w = parseFloat(userProfile?.weight || '0');
+    const h = parseFloat(userProfile?.height || '0');
+    let bmiValue = '0.0';
+    if (w > 0 && h > 0) {
+        bmiValue = (w / ((h/100) * (h/100))).toFixed(1);
+    }
     
-    // Determine Category
-    const bmiCategory = (() => {
-        const bmi = parseFloat(bmiValue);
-        if (bmi === 0) return { label: '-', color: 'text-slate-500' };
-        if (bmi < 18.5) return { label: 'ผอม', color: 'text-blue-400' };
-        if (bmi < 23) return { label: 'สมส่วน', color: 'text-emerald-400' };
-        if (bmi < 25) return { label: 'ท้วม', color: 'text-yellow-400' };
-        if (bmi < 30) return { label: 'อ้วน', color: 'text-orange-400' };
-        return { label: 'อ้วนมาก', color: 'text-red-400' };
-    })();
+    // Determine Category without IIFE to avoid parser confusion
+    let bmiCategory = { label: 'อ้วนมาก', color: 'text-red-400' };
+    const bmi = parseFloat(bmiValue);
+    
+    if (bmi === 0) bmiCategory = { label: '-', color: 'text-slate-500' };
+    else if (bmi < 18.5) bmiCategory = { label: 'ผอม', color: 'text-blue-400' };
+    else if (bmi < 23) bmiCategory = { label: 'สมส่วน', color: 'text-emerald-400' };
+    else if (bmi < 25) bmiCategory = { label: 'ท้วม', color: 'text-yellow-400' };
+    else if (bmi < 30) bmiCategory = { label: 'อ้วน', color: 'text-orange-400' };
 
     return (
       <div className="p-6 pb-24 max-w-md mx-auto animate-in fade-in duration-500">

@@ -1,12 +1,11 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
-import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Check, Calendar, ChevronDown, Utensils, Camera, X } from 'lucide-react';
-import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile, NutritionLog } from './types';
+import { useState, useEffect, useMemo } from 'react';
+import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Check, Calendar, ChevronDown, X } from 'lucide-react';
+import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile } from './types';
 import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES, PRESET_AVATARS } from './constants';
 import { ExerciseCard } from './components/ExerciseCard';
 import { AICoachModal } from './components/AICoachModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
-import { analyzeFoodImage } from './services/geminiService';
 
 // Helper functions moved outside component to avoid scope/hoisting issues
 const calculateTotalVolume = (exercises: Exercise[]) => {
@@ -32,20 +31,15 @@ const App = () => {
   const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
   const [viewingSession, setViewingSession] = useState<WorkoutSession | null>(null); 
   const [history, setHistory] = useState<WorkoutSession[]>([]);
-  const [nutritionLogs, setNutritionLogs] = useState<NutritionLog[]>([]); // New State for Nutrition
   const [isCoachOpen, setIsCoachOpen] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
-  const [activeTab, setActiveTab] = useState<'workout' | 'dashboard' | 'profile' | 'nutrition'>('workout');
+  const [activeTab, setActiveTab] = useState<'workout' | 'dashboard' | 'profile'>('workout');
   const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isLoginMode, setIsLoginMode] = useState(false);
   const [filterRange, setFilterRange] = useState<'all' | 'day' | 'week' | 'month' | 'year'>('all');
   
-  // Nutrition Analysis State
-  const [isAnalyzingFood, setIsAnalyzingFood] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
   // Login Form State
   const [loginForm, setLoginForm] = useState({ username: '', displayName: '', age: '', weight: '', height: '', avatarUrl: PRESET_AVATARS[0] });
 
@@ -87,11 +81,10 @@ const App = () => {
     }
   }, []);
 
-  // Fetch History and Nutrition when profile is set
+  // Fetch History when profile is set
   useEffect(() => {
     if (userProfile) {
         fetchHistory(userProfile.username);
-        fetchNutritionLogs(userProfile.username);
     }
   }, [userProfile]);
 
@@ -154,36 +147,6 @@ const App = () => {
       console.error("Error fetching history:", error.message || error);
     } finally {
       setIsLoadingHistory(false);
-    }
-  };
-
-  const fetchNutritionLogs = async (username: string) => {
-    if (!isSupabaseConfigured) return;
-    try {
-      const { data, error } = await supabase
-        .from('nutrition_logs')
-        .select('*')
-        .eq('user_id', username)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      if (data) {
-        const loadedLogs: NutritionLog[] = data.map((item: any) => ({
-          id: item.id,
-          foodName: item.food_name,
-          calories: item.calories,
-          protein: item.protein,
-          carbs: item.carbs,
-          fat: item.fat,
-          imageUrl: item.image_preview,
-          date: new Date(item.created_at).toLocaleDateString('th-TH'),
-          timestamp: new Date(item.created_at).getTime()
-        }));
-        setNutritionLogs(loadedLogs);
-      }
-    } catch (error) {
-      console.error("Error fetching nutrition:", error);
     }
   };
 
@@ -300,7 +263,6 @@ const App = () => {
               localStorage.removeItem('repx_username');
               setUserProfile(null);
               setHistory([]);
-              setNutritionLogs([]);
               setLoginForm({ username: '', displayName: '', age: '', weight: '', height: '', avatarUrl: PRESET_AVATARS[0] });
               setIsLoginMode(true);
               setConfirmModal(prev => ({ ...prev, isOpen: false }));
@@ -318,97 +280,6 @@ const App = () => {
           isDangerous: true,
           onConfirm: () => {
               setActiveSession(null);
-              setConfirmModal(prev => ({ ...prev, isOpen: false }));
-          }
-      });
-  };
-
-  // --- Nutrition Logic ---
-  const handleFoodImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !userProfile) return;
-
-    // Validate Image
-    if (!file.type.startsWith('image/')) {
-        alert('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
-        return;
-    }
-
-    setIsAnalyzingFood(true);
-
-    try {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = async () => {
-            const base64 = reader.result as string;
-            
-            try {
-                // Call Gemini Service
-                const analysisResult = await analyzeFoodImage(base64);
-                
-                if (analysisResult.foodName === 'Not Food') {
-                    alert('AI ไม่สามารถระบุอาหารได้ หรือรูปนี้ไม่ใช่อาหาร');
-                    setIsAnalyzingFood(false);
-                    return;
-                }
-
-                // Create Nutrition Log
-                const newLog: NutritionLog = {
-                    id: crypto.randomUUID(),
-                    foodName: analysisResult.foodName,
-                    calories: analysisResult.calories,
-                    protein: analysisResult.protein,
-                    carbs: analysisResult.carbs,
-                    fat: analysisResult.fat,
-                    imageUrl: base64, // For quick preview, can be large. In real prod, upload to storage first.
-                    date: new Date().toLocaleDateString('th-TH'),
-                    timestamp: Date.now()
-                };
-
-                // Save to Supabase
-                if (isSupabaseConfigured) {
-                    const { error } = await supabase.from('nutrition_logs').insert([{
-                        id: newLog.id,
-                        user_id: userProfile.username,
-                        food_name: newLog.foodName,
-                        calories: newLog.calories,
-                        protein: newLog.protein,
-                        carbs: newLog.carbs,
-                        fat: newLog.fat,
-                        image_preview: newLog.imageUrl // Storing base64 text for simplicity in this version
-                    }]);
-                    if (error) throw error;
-                }
-
-                setNutritionLogs(prev => [newLog, ...prev]);
-
-            } catch (error) {
-                console.error("AI Analysis failed:", error);
-                alert("เกิดข้อผิดพลาดในการวิเคราะห์รูปภาพ");
-            } finally {
-                setIsAnalyzingFood(false);
-            }
-        };
-    } catch (error) {
-        console.error("File reading error:", error);
-        setIsAnalyzingFood(false);
-    }
-  };
-
-  const deleteNutritionLog = async (logId: string) => {
-      setConfirmModal({
-          isOpen: true,
-          title: 'ลบรายการอาหาร',
-          message: 'คุณต้องการลบรายการนี้ใช่หรือไม่?',
-          confirmText: 'ลบ',
-          cancelText: 'ยกเลิก',
-          isDangerous: true,
-          onConfirm: async () => {
-              if (isSupabaseConfigured) {
-                  const { error } = await supabase.from('nutrition_logs').delete().eq('id', logId);
-                  if (error) console.error("Delete log error:", error);
-              }
-              setNutritionLogs(prev => prev.filter(item => item.id !== logId));
               setConfirmModal(prev => ({ ...prev, isOpen: false }));
           }
       });
@@ -1317,132 +1188,6 @@ const App = () => {
     );
   };
 
-  const renderNutrition = () => {
-    // Calculate total calories for today
-    const today = new Date().toLocaleDateString('th-TH');
-    const todaysLogs = nutritionLogs.filter(log => log.date === today);
-    const totalCals = todaysLogs.reduce((acc, log) => acc + log.calories, 0);
-    const totalProtein = todaysLogs.reduce((acc, log) => acc + log.protein, 0);
-    const totalCarbs = todaysLogs.reduce((acc, log) => acc + log.carbs, 0);
-    const totalFat = todaysLogs.reduce((acc, log) => acc + log.fat, 0);
-
-    const TARGET_CALS = 2500; // Hardcoded target for now
-    const progress = Math.min((totalCals / TARGET_CALS) * 100, 100);
-
-    return (
-        <div className="p-4 pb-24 max-w-md mx-auto animate-in fade-in duration-500">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-white">โภชนาการ <span className="text-emerald-500">.</span></h1>
-            </div>
-
-            {/* Calorie Progress */}
-            <div className="bg-slate-800 rounded-3xl p-6 border border-slate-700 text-center relative overflow-hidden mb-6">
-                 <div className="absolute top-0 right-0 p-4 opacity-5"><Utensils size={100} /></div>
-                 
-                 <div className="w-32 h-32 mx-auto mb-4 relative flex items-center justify-center">
-                    <svg className="w-full h-full transform -rotate-90">
-                        <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-700" />
-                        <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" strokeDasharray={351} strokeDashoffset={351 - (351 * progress) / 100} className="text-emerald-500 transition-all duration-1000" />
-                    </svg>
-                    <div className="absolute text-center">
-                        <span className="text-3xl font-bold text-white block">{totalCals}</span>
-                        <span className="text-[10px] text-slate-400 uppercase tracking-widest">KCAL</span>
-                    </div>
-                 </div>
-
-                 <div className="grid grid-cols-3 gap-2 mt-4">
-                     <div className="bg-slate-900/50 p-2 rounded-xl">
-                         <p className="text-xs text-slate-400 mb-1">โปรตีน</p>
-                         <p className="text-white font-bold">{totalProtein}g</p>
-                     </div>
-                     <div className="bg-slate-900/50 p-2 rounded-xl">
-                         <p className="text-xs text-slate-400 mb-1">คาร์บ</p>
-                         <p className="text-white font-bold">{totalCarbs}g</p>
-                     </div>
-                     <div className="bg-slate-900/50 p-2 rounded-xl">
-                         <p className="text-xs text-slate-400 mb-1">ไขมัน</p>
-                         <p className="text-white font-bold">{totalFat}g</p>
-                     </div>
-                 </div>
-            </div>
-
-            {/* Action Button */}
-            <div className="mb-6">
-                <input 
-                    type="file" 
-                    accept="image/*" 
-                    capture="environment"
-                    ref={fileInputRef}
-                    onChange={handleFoodImageUpload}
-                    className="hidden"
-                />
-                <button 
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isAnalyzingFood}
-                    className="w-full bg-emerald-600 hover:bg-emerald-500 text-white py-4 rounded-xl font-bold shadow-lg shadow-emerald-900/30 flex items-center justify-center gap-2 transform transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {isAnalyzingFood ? (
-                        <>
-                            <Loader2 className="animate-spin" /> กำลังวิเคราะห์รูปภาพ...
-                        </>
-                    ) : (
-                        <>
-                            <Camera size={20} /> ถ่ายรูปอาหารเพื่อคำนวณแคล
-                        </>
-                    )}
-                </button>
-            </div>
-
-            {/* Food Logs */}
-            <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm px-1">
-                <Utensils size={16} className="text-slate-400"/> รายการวันนี้ ({todaysLogs.length})
-            </h3>
-
-            {todaysLogs.length === 0 ? (
-                <div className="text-center py-10 bg-slate-800/30 rounded-2xl border border-dashed border-slate-700">
-                    <p className="text-slate-500 text-sm">ยังไม่ได้บันทึกอาหารวันนี้</p>
-                </div>
-            ) : (
-                <div className="space-y-3">
-                    {todaysLogs.map((log) => (
-                        <div key={log.id} className="bg-slate-800 p-3 rounded-xl border border-slate-700 flex gap-3 group relative">
-                            {/* Image Thumbnail */}
-                            <div className="w-16 h-16 bg-slate-900 rounded-lg overflow-hidden flex-shrink-0">
-                                {log.imageUrl ? (
-                                    <img src={log.imageUrl} alt={log.foodName} className="w-full h-full object-cover" />
-                                ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-slate-600">
-                                        <Utensils size={20} />
-                                    </div>
-                                )}
-                            </div>
-                            
-                            <div className="flex-1">
-                                <div className="flex justify-between items-start">
-                                    <h4 className="text-white font-bold text-sm">{log.foodName}</h4>
-                                    <span className="text-emerald-400 font-bold text-sm">{log.calories} <span className="text-xs text-emerald-600">kcal</span></span>
-                                </div>
-                                <div className="flex gap-2 mt-2 text-xs text-slate-400">
-                                    <span className="bg-slate-900 px-1.5 py-0.5 rounded">P: {log.protein}</span>
-                                    <span className="bg-slate-900 px-1.5 py-0.5 rounded">C: {log.carbs}</span>
-                                    <span className="bg-slate-900 px-1.5 py-0.5 rounded">F: {log.fat}</span>
-                                </div>
-                            </div>
-
-                            <button 
-                                onClick={() => deleteNutritionLog(log.id)}
-                                className="absolute top-2 right-2 p-1.5 bg-slate-700/50 text-slate-400 rounded-full opacity-0 group-hover:opacity-100 hover:bg-red-500 hover:text-white transition-all"
-                            >
-                                <X size={14} />
-                            </button>
-                        </div>
-                    ))}
-                </div>
-            )}
-        </div>
-    );
-  };
-
   const renderProfile = () => {
     // Calculate BMI
     const w = parseFloat(userProfile?.weight || '0');
@@ -1548,7 +1293,6 @@ const App = () => {
        activeSession ? renderActiveSession() :
        activeTab === 'dashboard' ? renderDashboard() :
        activeTab === 'profile' ? renderProfile() :
-       activeTab === 'nutrition' ? renderNutrition() :
        renderSelectionScreen()}
 
       {/* Bottom Navigation */}
@@ -1566,12 +1310,6 @@ const App = () => {
               className={`p-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'text-blue-500 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
             >
               <LayoutDashboard size={24} />
-            </button>
-             <button
-              onClick={() => setActiveTab('nutrition')}
-              className={`p-3 rounded-xl transition-all ${activeTab === 'nutrition' ? 'text-blue-500 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              <Utensils size={24} />
             </button>
             <button
               onClick={() => setActiveTab('profile')}

@@ -46,15 +46,3 @@ export interface UserProfile {
   height: string;
   avatarUrl: string; // Added avatar URL
 }
-
-export interface NutritionLog {
-  id: string;
-  foodName: string;
-  calories: number;
-  protein: number;
-  carbs: number;
-  fat: number;
-  imageUrl?: string; // Optional: base64 preview or url
-  date: string; // ISO Date string for grouping
-  timestamp: number;
-}

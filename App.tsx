@@ -1,13 +1,13 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Check, Calendar, ChevronDown } from 'lucide-react';
-import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile } from './types';
+import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Check, Calendar, ChevronDown, Activity } from 'lucide-react';
+import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile, Gender, ActivityLevel } from './types';
 import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES, PRESET_AVATARS } from './constants';
 import { ExerciseCard } from './components/ExerciseCard';
 import { AICoachModal } from './components/AICoachModal';
 import { ConfirmModal } from './components/ConfirmModal';
 import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
 
-// Helper functions moved outside component to avoid scope/hoisting issues
+// Helper functions
 const calculateTotalVolume = (exercises: Exercise[]) => {
   return exercises.reduce((total, ex) => {
     return total + ex.sets.reduce((setTotal, set) => {
@@ -41,7 +41,16 @@ const App = () => {
   const [filterRange, setFilterRange] = useState<'all' | 'day' | 'week' | 'month' | 'year'>('all');
   
   // Login Form State
-  const [loginForm, setLoginForm] = useState({ username: '', displayName: '', age: '', weight: '', height: '', avatarUrl: PRESET_AVATARS[0] });
+  const [loginForm, setLoginForm] = useState({ 
+    username: '', 
+    displayName: '', 
+    age: '', 
+    weight: '', 
+    height: '', 
+    avatarUrl: PRESET_AVATARS[0],
+    gender: 'male' as Gender,
+    activityLevel: 'moderate' as ActivityLevel
+  });
 
   // Modal State
   const [confirmModal, setConfirmModal] = useState<{
@@ -112,7 +121,9 @@ const App = () => {
                   age: data.age,
                   weight: data.weight,
                   height: data.height,
-                  avatarUrl: data.avatar_url || PRESET_AVATARS[0]
+                  avatarUrl: data.avatar_url || PRESET_AVATARS[0],
+                  gender: (data.gender as Gender) || 'male',
+                  activityLevel: (data.activity_level as ActivityLevel) || 'moderate'
               });
           } else {
               localStorage.removeItem('repx_username');
@@ -184,7 +195,9 @@ const App = () => {
                 age: data.age,
                 weight: data.weight,
                 height: data.height,
-                avatarUrl: data.avatar_url || PRESET_AVATARS[0]
+                avatarUrl: data.avatar_url || PRESET_AVATARS[0],
+                gender: (data.gender as Gender) || 'male',
+                activityLevel: (data.activity_level as ActivityLevel) || 'moderate'
             };
 
             localStorage.setItem('repx_username', profile.username);
@@ -218,7 +231,9 @@ const App = () => {
                 age: loginForm.age,
                 weight: loginForm.weight,
                 height: loginForm.height,
-                avatarUrl: loginForm.avatarUrl
+                avatarUrl: loginForm.avatarUrl,
+                gender: loginForm.gender,
+                activityLevel: loginForm.activityLevel
             };
 
             const { error: insertError } = await supabase
@@ -229,7 +244,9 @@ const App = () => {
                     age: newProfile.age,
                     weight: newProfile.weight,
                     height: newProfile.height,
-                    avatar_url: newProfile.avatarUrl
+                    avatar_url: newProfile.avatarUrl,
+                    gender: newProfile.gender,
+                    activity_level: newProfile.activityLevel
                 }]);
             
             if (insertError) throw insertError;
@@ -263,7 +280,16 @@ const App = () => {
               localStorage.removeItem('repx_username');
               setUserProfile(null);
               setHistory([]);
-              setLoginForm({ username: '', displayName: '', age: '', weight: '', height: '', avatarUrl: PRESET_AVATARS[0] });
+              setLoginForm({ 
+                  username: '', 
+                  displayName: '', 
+                  age: '', 
+                  weight: '', 
+                  height: '', 
+                  avatarUrl: PRESET_AVATARS[0],
+                  gender: 'male',
+                  activityLevel: 'moderate'
+              });
               setIsLoginMode(true);
               setConfirmModal(prev => ({ ...prev, isOpen: false }));
           }
@@ -552,38 +578,38 @@ const App = () => {
         <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/20 rounded-full blur-[100px]" />
         <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[100px]" />
 
-        <div className="relative z-10 w-full max-w-sm bg-slate-800/50 backdrop-blur-xl border border-slate-700 p-8 rounded-3xl shadow-2xl">
-            <div className="text-center mb-8">
-                <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-blue-900/50 transform rotate-3">
-                    <Dumbbell size={40} className="text-white" />
+        <div className="relative z-10 w-full max-w-sm bg-slate-800/50 backdrop-blur-xl border border-slate-700 p-8 rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh] no-scrollbar">
+            <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-900/50 transform rotate-3">
+                    <Dumbbell size={32} className="text-white" />
                 </div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                     REPx
                 </h1>
-                <p className="text-slate-400 text-sm mt-1">Personal Fitness Tracker</p>
+                <p className="text-slate-400 text-xs mt-1">Personal Fitness Tracker</p>
             </div>
 
             <div className="space-y-4">
-                <div className="flex bg-slate-900/50 p-1 rounded-xl mb-6 border border-slate-700">
+                <div className="flex bg-slate-900/50 p-1 rounded-xl mb-4 border border-slate-700">
                     <button 
                         onClick={() => setIsLoginMode(false)}
-                        className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${!isLoginMode ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                        className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${!isLoginMode ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
                     >
                         สมัครใหม่
                     </button>
                     <button 
                         onClick={() => setIsLoginMode(true)}
-                        className={`flex-1 py-2 text-sm font-medium rounded-lg transition-all ${isLoginMode ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                        className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${isLoginMode ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
                     >
                         เข้าสู่ระบบ
                     </button>
                 </div>
 
                 {!isLoginMode && (
-                    <div className="mb-6">
+                    <div className="mb-4">
                         <label className="text-xs text-slate-400 mb-2 block text-center">เลือกตัวละครของคุณ</label>
-                        <div className="flex justify-center mb-4">
-                             <div className="w-24 h-24 rounded-full border-4 border-slate-700 overflow-hidden bg-slate-900 shadow-xl relative group">
+                        <div className="flex justify-center mb-3">
+                             <div className="w-20 h-20 rounded-full border-4 border-slate-700 overflow-hidden bg-slate-900 shadow-xl relative group">
                                 <img src={loginForm.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                              </div>
                         </div>
@@ -612,7 +638,7 @@ const App = () => {
                         type="text" 
                         value={loginForm.username}
                         onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
-                        className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all mt-1"
+                        className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all mt-1 text-sm"
                         placeholder="กรอกชื่อผู้ใช้..."
                     />
                 </div>
@@ -625,23 +651,53 @@ const App = () => {
                                 type="text" 
                                 value={loginForm.displayName}
                                 onChange={(e) => setLoginForm({...loginForm, displayName: e.target.value})}
-                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all mt-1"
+                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all mt-1 text-sm"
                                 placeholder="ชื่อเล่นของคุณ..."
                             />
                         </div>
-                        <div className="grid grid-cols-3 gap-3">
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                             <div>
+                                <label className="text-xs font-medium text-slate-400 ml-1">เพศ</label>
+                                <select 
+                                    value={loginForm.gender} 
+                                    onChange={(e) => setLoginForm({...loginForm, gender: e.target.value as Gender})}
+                                    className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none mt-1 text-sm appearance-none"
+                                >
+                                    <option value="male">ชาย</option>
+                                    <option value="female">หญิง</option>
+                                </select>
+                            </div>
                             <div>
                                 <label className="text-xs font-medium text-slate-400 ml-1">อายุ</label>
-                                <input type="number" value={loginForm.age} onChange={(e) => setLoginForm({...loginForm, age: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1" placeholder="ปี" />
+                                <input type="number" value={loginForm.age} onChange={(e) => setLoginForm({...loginForm, age: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1 text-sm" placeholder="ปี" />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <label className="text-xs font-medium text-slate-400 ml-1">น้ำหนัก (kg)</label>
+                                <input type="number" value={loginForm.weight} onChange={(e) => setLoginForm({...loginForm, weight: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1 text-sm" placeholder="kg" />
                             </div>
                             <div>
-                                <label className="text-xs font-medium text-slate-400 ml-1">น้ำหนัก</label>
-                                <input type="number" value={loginForm.weight} onChange={(e) => setLoginForm({...loginForm, weight: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1" placeholder="kg" />
+                                <label className="text-xs font-medium text-slate-400 ml-1">ส่วนสูง (cm)</label>
+                                <input type="number" value={loginForm.height} onChange={(e) => setLoginForm({...loginForm, height: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1 text-sm" placeholder="cm" />
                             </div>
-                            <div>
-                                <label className="text-xs font-medium text-slate-400 ml-1">ส่วนสูง</label>
-                                <input type="number" value={loginForm.height} onChange={(e) => setLoginForm({...loginForm, height: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1" placeholder="cm" />
-                            </div>
+                        </div>
+
+                        <div>
+                            <label className="text-xs font-medium text-slate-400 ml-1">กิจกรรม</label>
+                            <select 
+                                value={loginForm.activityLevel} 
+                                onChange={(e) => setLoginForm({...loginForm, activityLevel: e.target.value as ActivityLevel})}
+                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none mt-1 text-sm appearance-none"
+                            >
+                                <option value="sedentary">ไม่ออกกำลังกาย</option>
+                                <option value="light">เล็กน้อย (1-3 วัน/สัปดาห์)</option>
+                                <option value="moderate">ปานกลาง (3-5 วัน/สัปดาห์)</option>
+                                <option value="active">หนัก (6-7 วัน/สัปดาห์)</option>
+                                <option value="very_active">หนักมาก (นักกีฬา/งานใช้แรง)</option>
+                            </select>
                         </div>
                     </>
                 )}
@@ -1192,20 +1248,45 @@ const App = () => {
     // Calculate BMI
     const w = parseFloat(userProfile?.weight || '0');
     const h = parseFloat(userProfile?.height || '0');
+    const age = parseFloat(userProfile?.age || '0');
+    const gender = userProfile?.gender || 'male';
+    const activity = userProfile?.activityLevel || 'moderate';
+
+    // BMI
     let bmiValue = '0.0';
     if (w > 0 && h > 0) {
         bmiValue = (w / ((h/100) * (h/100))).toFixed(1);
     }
     
-    // Determine Category without IIFE to avoid parser confusion
-    let bmiCategory = { label: 'อ้วนมาก', color: 'text-red-400' };
+    let bmiCategory = { label: '-', color: 'text-slate-500' };
     const bmi = parseFloat(bmiValue);
-    
-    if (bmi === 0) bmiCategory = { label: '-', color: 'text-slate-500' };
-    else if (bmi < 18.5) bmiCategory = { label: 'ผอม', color: 'text-blue-400' };
-    else if (bmi < 23) bmiCategory = { label: 'สมส่วน', color: 'text-emerald-400' };
-    else if (bmi < 25) bmiCategory = { label: 'ท้วม', color: 'text-yellow-400' };
-    else if (bmi < 30) bmiCategory = { label: 'อ้วน', color: 'text-orange-400' };
+    if (bmi > 0) {
+        if (bmi < 18.5) bmiCategory = { label: 'ผอม', color: 'text-blue-400' };
+        else if (bmi < 23) bmiCategory = { label: 'สมส่วน', color: 'text-emerald-400' };
+        else if (bmi < 25) bmiCategory = { label: 'ท้วม', color: 'text-yellow-400' };
+        else if (bmi < 30) bmiCategory = { label: 'อ้วน', color: 'text-orange-400' };
+        else bmiCategory = { label: 'อ้วนมาก', color: 'text-red-400' };
+    }
+
+    // BMR (Mifflin-St Jeor Equation)
+    let bmr = 0;
+    if (w > 0 && h > 0 && age > 0) {
+        if (gender === 'male') {
+            bmr = (10 * w) + (6.25 * h) - (5 * age) + 5;
+        } else {
+            bmr = (10 * w) + (6.25 * h) - (5 * age) - 161;
+        }
+    }
+
+    // TDEE Multipliers
+    const multipliers: { [key: string]: number } = {
+        'sedentary': 1.2,
+        'light': 1.375,
+        'moderate': 1.55,
+        'active': 1.725,
+        'very_active': 1.9
+    };
+    const tdee = bmr * (multipliers[activity] || 1.2);
 
     return (
       <div className="p-6 pb-24 max-w-md mx-auto animate-in fade-in duration-500">
@@ -1246,6 +1327,65 @@ const App = () => {
 
                   <h2 className="text-2xl font-bold text-white">{userProfile?.displayName}</h2>
                   <p className="text-slate-400 text-sm">@{userProfile?.username}</p>
+              </div>
+          </div>
+
+          <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700 mb-6">
+              <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm">
+                  <Activity size={18} className="text-blue-400"/> ข้อมูลสุขภาพ
+              </h3>
+              
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div>
+                      <label className="text-xs text-slate-400 mb-1 block">เพศ</label>
+                      <select 
+                          value={userProfile?.gender}
+                          onChange={async (e) => {
+                              if (!userProfile) return;
+                              const newGender = e.target.value as Gender;
+                              setUserProfile({...userProfile, gender: newGender});
+                              if (isSupabaseConfigured) {
+                                  await supabase.from('profiles').update({ gender: newGender }).eq('username', userProfile.username);
+                              }
+                          }}
+                          className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-lg px-2 py-2 outline-none"
+                      >
+                          <option value="male">ชาย</option>
+                          <option value="female">หญิง</option>
+                      </select>
+                  </div>
+                   <div>
+                      <label className="text-xs text-slate-400 mb-1 block">ระดับกิจกรรม</label>
+                      <select 
+                          value={userProfile?.activityLevel}
+                          onChange={async (e) => {
+                              if (!userProfile) return;
+                              const newLevel = e.target.value as ActivityLevel;
+                              setUserProfile({...userProfile, activityLevel: newLevel});
+                              if (isSupabaseConfigured) {
+                                  await supabase.from('profiles').update({ activity_level: newLevel }).eq('username', userProfile.username);
+                              }
+                          }}
+                          className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-lg px-2 py-2 outline-none"
+                      >
+                        <option value="sedentary">ไม่ออก (Sedentary)</option>
+                        <option value="light">เล็กน้อย (Light)</option>
+                        <option value="moderate">ปานกลาง (Moderate)</option>
+                        <option value="active">หนัก (Active)</option>
+                        <option value="very_active">หนักมาก (Very Active)</option>
+                      </select>
+                  </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-900 p-3 rounded-xl border border-slate-700 text-center">
+                    <p className="text-slate-400 text-[10px] mb-1">BMR (เผาผลาญพื้นฐาน)</p>
+                    <p className="text-lg font-bold text-orange-400">{Math.round(bmr)} <span className="text-xs text-slate-500 font-normal">kcal</span></p>
+                </div>
+                <div className="bg-slate-900 p-3 rounded-xl border border-slate-700 text-center">
+                    <p className="text-slate-400 text-[10px] mb-1">TDEE (ใช้จริงต่อวัน)</p>
+                    <p className="text-lg font-bold text-red-400">{Math.round(tdee)} <span className="text-xs text-slate-500 font-normal">kcal</span></p>
+                </div>
               </div>
           </div>
 

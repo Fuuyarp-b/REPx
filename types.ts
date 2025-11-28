@@ -38,11 +38,16 @@ export interface ChatMessage {
   timestamp: number;
 }
 
+export type Gender = 'male' | 'female';
+export type ActivityLevel = 'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
+
 export interface UserProfile {
   username: string;
   displayName: string;
   age: string;
   weight: string;
   height: string;
-  avatarUrl: string; // Added avatar URL
+  avatarUrl: string;
+  gender: Gender;
+  activityLevel: ActivityLevel;
 }

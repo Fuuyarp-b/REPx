@@ -8,17 +8,17 @@ declare const process: {
   }
 };
 
-const getClient = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    throw new Error("ไม่พบ API Key กรุณาตรวจสอบการตั้งค่า Environment Variable (VITE_API_KEY)");
-  }
-  return new GoogleGenAI({ apiKey: apiKey });
-};
-
 export const getFitnessAdvice = async (query: string): Promise<string> => {
   try {
-    const ai = getClient();
+    // NOTE: We access API_KEY via process.env as per @google/genai guidelines.
+    // This variable is injected via vite.config.ts 'define' configuration.
+    const apiKey = process.env.API_KEY;
+
+    if (!apiKey) {
+        return "ไม่พบ API Key กรุณาตรวจสอบการตั้งค่า Environment Variable (API_KEY)";
+    }
+
+    const ai = new GoogleGenAI({ apiKey: apiKey });
     
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash',

@@ -21,8 +21,8 @@ export default defineConfig(({ mode }) => {
     },
     define: {
       // Inject environment variables as strings during build
-      // Prioritize VITE_API_KEY if API_KEY is missing (common in Vercel setups)
-      'process.env.API_KEY': JSON.stringify(env.API_KEY || env.VITE_API_KEY || process.env.API_KEY || ''),
+      // This ensures code like process.env.VITE_SUPABASE_URL works in the browser
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || process.env.API_KEY || ''),
       'process.env.VITE_SUPABASE_URL': JSON.stringify(env.VITE_SUPABASE_URL || process.env.VITE_SUPABASE_URL || ''),
       'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(env.VITE_SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY || ''),
     }

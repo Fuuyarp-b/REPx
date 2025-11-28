@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useMemo } from 'react';
 import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Check, Calendar, ChevronDown } from 'lucide-react';
 import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile } from './types';
@@ -1251,75 +1250,78 @@ const App = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                  <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">BMI</p>
-                  <p className="text-2xl font-bold text-white">{bmiValue}</p>
-                  <p className={`text-sm ${bmiCategory.color}`}>{bmiCategory.label}</p>
+              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
+                  <p className="text-slate-400 text-xs mb-1">อายุ</p>
+                  <p className="text-xl font-bold text-white">{userProfile?.age} <span className="text-xs font-normal text-slate-500">ปี</span></p>
               </div>
-              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                  <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">น้ำหนัก</p>
-                  <p className="text-2xl font-bold text-white">{userProfile?.weight} <span className="text-sm text-slate-500">kg</span></p>
+              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
+                  <p className="text-slate-400 text-xs mb-1">ส่วนสูง</p>
+                  <p className="text-xl font-bold text-white">{userProfile?.height} <span className="text-xs font-normal text-slate-500">cm</span></p>
               </div>
-              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                  <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">ส่วนสูง</p>
-                  <p className="text-2xl font-bold text-white">{userProfile?.height} <span className="text-sm text-slate-500">cm</span></p>
+               <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
+                  <p className="text-slate-400 text-xs mb-1">น้ำหนัก</p>
+                  <p className="text-xl font-bold text-white">{userProfile?.weight} <span className="text-xs font-normal text-slate-500">kg</span></p>
               </div>
-              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                  <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">อายุ</p>
-                  <p className="text-2xl font-bold text-white">{userProfile?.age} <span className="text-sm text-slate-500">ปี</span></p>
+              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center relative overflow-hidden">
+                  <p className="text-slate-400 text-xs mb-1">BMI</p>
+                  <p className={`text-xl font-bold ${bmiCategory.color}`}>{bmiValue}</p>
+                  <p className={`text-[10px] ${bmiCategory.color} opacity-80 font-medium mt-0.5`}>{bmiCategory.label}</p>
               </div>
           </div>
 
           <button 
-            onClick={handleLogout}
-            className="w-full py-4 bg-red-900/20 text-red-500 rounded-xl font-bold hover:bg-red-900/30 transition-colors flex items-center justify-center gap-2"
+              onClick={handleLogout}
+              className="w-full py-4 bg-slate-800 text-red-400 hover:bg-red-900/20 hover:text-red-500 rounded-xl border border-slate-700 transition-colors flex items-center justify-center gap-2"
           >
-            <LogOut size={20} />
-            ออกจากระบบ
+              <LogOut size={20} />
+              ออกจากระบบ
           </button>
       </div>
     );
   };
 
-  // Main Render Logic
   if (!userProfile) {
     return renderLoginScreen();
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-50 font-kanit">
-      {/* Dynamic Content */}
-      {viewingSession ? renderHistoryDetail() :
+    <div className="min-h-screen bg-slate-900 text-slate-50 font-sans selection:bg-blue-500/30">
+      
+      {activeSession && !showSummary ? renderActiveSession() :
        showSummary ? renderSummary() :
-       activeSession ? renderActiveSession() :
+       viewingSession ? renderHistoryDetail() :
+       activeTab === 'workout' ? renderSelectionScreen() :
        activeTab === 'dashboard' ? renderDashboard() :
-       activeTab === 'profile' ? renderProfile() :
-       renderSelectionScreen()}
+       renderProfile()
+      }
 
       {/* Bottom Navigation */}
       {!activeSession && !showSummary && !viewingSession && (
-        <div className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-lg border-t border-slate-800 p-2 z-50">
-          <div className="flex justify-around max-w-md mx-auto">
-            <button
-              onClick={() => setActiveTab('workout')}
-              className={`p-3 rounded-xl transition-all ${activeTab === 'workout' ? 'text-blue-500 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              <Dumbbell size={24} />
-            </button>
-            <button
-              onClick={() => setActiveTab('dashboard')}
-              className={`p-3 rounded-xl transition-all ${activeTab === 'dashboard' ? 'text-blue-500 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              <LayoutDashboard size={24} />
-            </button>
-            <button
-              onClick={() => setActiveTab('profile')}
-              className={`p-3 rounded-xl transition-all ${activeTab === 'profile' ? 'text-blue-500 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              <User size={24} />
-            </button>
+          <div className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 p-4 pb-6 z-50">
+              <div className="flex justify-around max-w-md mx-auto">
+                  <button 
+                    onClick={() => setActiveTab('workout')}
+                    className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'workout' ? 'text-blue-500' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                      <Dumbbell size={24} />
+                      <span className="text-[10px] font-medium">ฝึกซ้อม</span>
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('dashboard')}
+                    className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'dashboard' ? 'text-blue-500' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                      <LayoutDashboard size={24} />
+                      <span className="text-[10px] font-medium">ภาพรวม</span>
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('profile')}
+                    className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-blue-500' : 'text-slate-500 hover:text-slate-300'}`}
+                  >
+                      <User size={24} />
+                      <span className="text-[10px] font-medium">โปรไฟล์</span>
+                  </button>
+              </div>
           </div>
-        </div>
       )}
 
       {/* Modals */}
@@ -1329,11 +1331,11 @@ const App = () => {
         isOpen={confirmModal.isOpen}
         title={confirmModal.title}
         message={confirmModal.message}
-        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
         onConfirm={confirmModal.onConfirm}
-        isDangerous={confirmModal.isDangerous}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
         confirmText={confirmModal.confirmText}
         cancelText={confirmModal.cancelText}
+        isDangerous={confirmModal.isDangerous}
       />
     </div>
   );

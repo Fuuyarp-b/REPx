@@ -1,58 +1,69 @@
-import { useState, useEffect, useMemo } from 'react';
-import { Dumbbell, Trophy, MessageCircle, Plus, LayoutDashboard, CalendarClock, Timer, History as HistoryIcon, Trash2, Pencil, BarChart3, Zap, Flame, Anchor, Settings, Loader2, AlertTriangle, User, LogOut, Save, ChevronLeft, Check, Calendar, ChevronDown, Activity } from 'lucide-react';
-import { WorkoutSession, WorkoutType, Exercise, WorkoutSet, UserProfile, Gender, ActivityLevel } from './types';
-import { PUSH_ROUTINE, PULL_ROUTINE, LEGS_ROUTINE, createSets, MOTIVATIONAL_QUOTES, PRESET_AVATARS } from './constants';
-import { ExerciseCard } from './components/ExerciseCard';
-import { AICoachModal } from './components/AICoachModal';
-import { ConfirmModal } from './components/ConfirmModal';
+import React, { useState, useEffect } from 'react';
+import { 
+  Dumbbell, 
+  Calendar, 
+  User, 
+  Play, 
+  Bot,
+  ChevronLeft,
+  LogIn,
+  UserPlus,
+  Loader2,
+  ArrowRight,
+  Check
+} from 'lucide-react';
+import { 
+  UserProfile, 
+  WorkoutSession, 
+  ActivityLevel,
+  Exercise,
+  WorkoutSet,
+  WorkoutType,
+  Gender
+} from './types';
+import { 
+  PUSH_ROUTINE, 
+  PULL_ROUTINE, 
+  LEGS_ROUTINE, 
+  MOTIVATIONAL_QUOTES,
+  PRESET_AVATARS
+} from './constants';
 import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
+import { AICoachModal } from './components/AICoachModal';
+import { ExerciseCard } from './components/ExerciseCard';
+import { ConfirmModal } from './components/ConfirmModal';
 
-// Helper functions
-const calculateTotalVolume = (exercises: Exercise[]) => {
-  return exercises.reduce((total, ex) => {
-    return total + ex.sets.reduce((setTotal, set) => {
-      if (set.completed && typeof set.weight === 'number' && typeof set.reps === 'number') {
-        return setTotal + (set.weight * set.reps);
-      }
-      return setTotal;
-    }, 0);
-  }, 0);
+// Default empty profile
+const EMPTY_PROFILE: UserProfile = {
+  username: '',
+  displayName: '',
+  age: '',
+  weight: '',
+  height: '',
+  avatarUrl: PRESET_AVATARS[0],
+  gender: 'male',
+  activityLevel: 'moderate'
 };
 
-const formatDuration = (start?: number, end?: number) => {
-  if (!start || !end) return '0 นาที';
-  const minutes = Math.floor((end - start) / 60000);
-  return `${minutes} นาที`;
-};
-
-const App = () => {
-  // State
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [activeSession, setActiveSession] = useState<WorkoutSession | null>(null);
-  const [viewingSession, setViewingSession] = useState<WorkoutSession | null>(null); 
-  const [history, setHistory] = useState<WorkoutSession[]>([]);
-  const [isCoachOpen, setIsCoachOpen] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
-  const [activeTab, setActiveTab] = useState<'workout' | 'dashboard' | 'profile'>('workout');
-  const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [isLoginMode, setIsLoginMode] = useState(false);
-  const [filterRange, setFilterRange] = useState<'all' | 'day' | 'week' | 'month' | 'year'>('all');
+const App: React.FC = () => {
+  // Auth State
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('register');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
   
-  // Login Form State
-  const [loginForm, setLoginForm] = useState({ 
-    username: '', 
-    displayName: '', 
-    age: '', 
-    weight: '', 
-    height: '', 
-    avatarUrl: PRESET_AVATARS[0],
-    gender: 'male' as Gender,
-    activityLevel: 'moderate' as ActivityLevel
-  });
+  // App State
+  const [userProfile, setUserProfile] = useState<UserProfile>(EMPTY_PROFILE);
+  const [currentSession, setCurrentSession] = useState<WorkoutSession | null>(null);
+  const [isCoachOpen, setIsCoachOpen] = useState(false);
+  const [view, setView] = useState<'home' | 'profile' | 'history'>('home');
+  const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
+  
+  // History State for Dashboard
+  const [history, setHistory] = useState<WorkoutSession[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
-  // Modal State
+  // Modals
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -69,1410 +80,788 @@ const App = () => {
     isDangerous: false
   });
 
-  // Get unique exercises from history for suggestions
-  const suggestedExercises = useMemo(() => {
-    const unique = new Map<string, { name: string; muscleGroup: any }>();
-    history.forEach(session => {
-        session.exercises.forEach(ex => {
-            if (!unique.has(ex.name)) {
-                unique.set(ex.name, { name: ex.name, muscleGroup: ex.muscleGroup });
-            }
-        });
-    });
-    return Array.from(unique.values()).sort((a, b) => a.name.localeCompare(b.name));
-  }, [history]);
-
-  // Initialize - Check for local session
   useEffect(() => {
-    const savedUsername = localStorage.getItem('repx_username');
-    if (savedUsername) {
-       fetchUserProfile(savedUsername);
-    }
+    setQuote(MOTIVATIONAL_QUOTES[Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length)]);
   }, []);
 
-  // Fetch History when profile is set
+  // Fetch history when logged in
   useEffect(() => {
-    if (userProfile) {
-        fetchHistory(userProfile.username);
+    if (isLoggedIn && isSupabaseConfigured) {
+      fetchHistory();
     }
-  }, [userProfile]);
+  }, [isLoggedIn]);
 
-  // Randomize quote when returning to selection screen
-  useEffect(() => {
-    if (!activeSession && !showSummary && !viewingSession && activeTab === 'workout') {
-      const randomIndex = Math.floor(Math.random() * MOTIVATIONAL_QUOTES.length);
-      setQuote(MOTIVATIONAL_QUOTES[randomIndex]);
-    }
-  }, [activeSession, showSummary, viewingSession, activeTab]);
-
-  const fetchUserProfile = async (username: string) => {
-      if (!isSupabaseConfigured) return;
-      try {
-          const { data } = await supabase
-            .from('profiles')
+  const fetchHistory = async () => {
+    if (!userProfile.username) return;
+    setLoadingHistory(true);
+    
+    try {
+        const { data, error } = await supabase
+            .from('workouts')
             .select('*')
-            .eq('username', username)
-            .single();
-          
-          if (data) {
-              setUserProfile({
-                  username: data.username,
-                  displayName: data.display_name,
-                  age: data.age,
-                  weight: data.weight,
-                  height: data.height,
-                  avatarUrl: data.avatar_url || PRESET_AVATARS[0],
-                  gender: (data.gender as Gender) || 'male',
-                  activityLevel: (data.activity_level as ActivityLevel) || 'moderate'
-              });
-          } else {
-              localStorage.removeItem('repx_username');
-          }
-      } catch (error) {
-          console.error("Error fetching profile:", error);
-      }
-  };
+            .eq('user_id', userProfile.username)
+            .order('created_at', { ascending: false });
 
-  const fetchHistory = async (username: string) => {
-    if (!isSupabaseConfigured) return;
-    setIsLoadingHistory(true);
-    try {
-      const { data, error } = await supabase
-        .from('workouts')
-        .select('*')
-        .eq('user_id', username)
-        .order('created_at', { ascending: false });
-
-      if (error) {
-          throw error;
-      }
-
-      if (data) {
-        const loadedHistory = data.map((item: any) => ({
-            ...item.data,
-            id: item.id
-        }));
-        setHistory(loadedHistory);
-      }
-    } catch (error: any) {
-      console.error("Error fetching history:", error.message || error);
+        if (error) {
+            console.error('Error fetching history:', error.message);
+        } else {
+            const parsedHistory: WorkoutSession[] = (data || []).map(row => ({
+                ...row.data,
+                id: row.id // Use DB ID
+            }));
+            setHistory(parsedHistory);
+        }
+    } catch (err) {
+        console.error("Fetch error:", err);
     } finally {
-      setIsLoadingHistory(false);
+        setLoadingHistory(false);
     }
   };
 
-  const handleLogin = async () => {
-    if (!loginForm.username.trim()) {
-        alert("กรุณากรอกชื่อผู้ใช้");
+  const handleAuth = async () => {
+    setAuthError('');
+    setAuthLoading(true);
+
+    // Validation
+    if (!userProfile.username.trim()) {
+        setAuthError('กรุณากรอกชื่อผู้ใช้ (Username)');
+        setAuthLoading(false);
         return;
     }
 
-    if (!isSupabaseConfigured) {
-        alert("ไม่ได้เชื่อมต่อ Database (Supabase) ไม่สามารถเข้าสู่ระบบได้");
-        return;
+    if (authMode === 'register') {
+        if (!userProfile.displayName || !userProfile.age || !userProfile.weight || !userProfile.height) {
+            setAuthError('กรุณากรอกข้อมูลให้ครบถ้วน');
+            setAuthLoading(false);
+            return;
+        }
     }
-
-    setIsLoggingIn(true);
 
     try {
-        if (isLoginMode) {
-            // --- LOGIN MODE ---
+        if (!isSupabaseConfigured) {
+            // Offline/Demo Mode
+            setIsLoggedIn(true);
+            setAuthLoading(false);
+            return;
+        }
+
+        if (authMode === 'login') {
+            // Login Logic
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
-                .eq('username', loginForm.username)
+                .eq('username', userProfile.username)
                 .single();
 
             if (error || !data) {
-                alert("ไม่พบผู้ใช้งานนี้ กรุณาตรวจสอบชื่อผู้ใช้ หรือสมัครสมาชิกใหม่");
-                setIsLoggingIn(false);
-                return;
+                setAuthError('ไม่พบชื่อผู้ใช้นี้ หรือเกิดข้อผิดพลาด');
+            } else {
+                setUserProfile({
+                    username: data.username,
+                    displayName: data.display_name,
+                    age: data.age,
+                    weight: data.weight,
+                    height: data.height,
+                    avatarUrl: data.avatar_url || PRESET_AVATARS[0],
+                    gender: (data.gender as Gender) || 'male',
+                    activityLevel: (data.activity_level as ActivityLevel) || 'moderate'
+                });
+                setIsLoggedIn(true);
             }
-
-            const profile: UserProfile = {
-                username: data.username,
-                displayName: data.display_name,
-                age: data.age,
-                weight: data.weight,
-                height: data.height,
-                avatarUrl: data.avatar_url || PRESET_AVATARS[0],
-                gender: (data.gender as Gender) || 'male',
-                activityLevel: (data.activity_level as ActivityLevel) || 'moderate'
-            };
-
-            localStorage.setItem('repx_username', profile.username);
-            setUserProfile(profile);
-
         } else {
-            // --- REGISTER MODE ---
-            if (!loginForm.displayName) {
-                alert("กรุณากรอกชื่อเล่น");
-                setIsLoggingIn(false);
-                return;
-            }
-
-            // Check duplicate
+            // Register Logic
+            // Check if user exists
             const { data: existingUser } = await supabase
                 .from('profiles')
                 .select('username')
-                .eq('username', loginForm.username)
+                .eq('username', userProfile.username)
                 .single();
-            
+
             if (existingUser) {
-                alert("ชื่อผู้ใช้นี้ถูกใช้งานแล้ว");
-                setIsLoggingIn(false);
+                setAuthError('ชื่อผู้ใช้นี้ถูกใช้งานแล้ว');
+                setAuthLoading(false);
                 return;
             }
 
-            // Create
-            const newProfile: UserProfile = {
-                username: loginForm.username,
-                displayName: loginForm.displayName,
-                age: loginForm.age,
-                weight: loginForm.weight,
-                height: loginForm.height,
-                avatarUrl: loginForm.avatarUrl,
-                gender: loginForm.gender,
-                activityLevel: loginForm.activityLevel
-            };
+            // Create new user
+            const { error } = await supabase.from('profiles').insert({
+                username: userProfile.username,
+                display_name: userProfile.displayName,
+                age: userProfile.age,
+                weight: userProfile.weight,
+                height: userProfile.height,
+                avatar_url: userProfile.avatarUrl,
+                gender: userProfile.gender,
+                activity_level: userProfile.activityLevel
+            });
 
-            const { error: insertError } = await supabase
-                .from('profiles')
-                .insert([{
-                    username: newProfile.username,
-                    display_name: newProfile.displayName,
-                    age: newProfile.age,
-                    weight: newProfile.weight,
-                    height: newProfile.height,
-                    avatar_url: newProfile.avatarUrl,
-                    gender: newProfile.gender,
-                    activity_level: newProfile.activityLevel
-                }]);
-            
-            if (insertError) throw insertError;
-
-            localStorage.setItem('repx_username', newProfile.username);
-            setUserProfile(newProfile);
-            setHistory([]); 
+            if (error) {
+                setAuthError('ไม่สามารถสร้างบัญชีได้: ' + error.message);
+            } else {
+                setIsLoggedIn(true);
+            }
         }
-
-    } catch (error: any) {
-        console.error("Login failed:", error);
-        if (error.message?.includes('row-level security')) {
-            alert("เกิดข้อผิดพลาด: ไม่สามารถบันทึกข้อมูลได้เนื่องจากติดสิทธิ์ความปลอดภัย (RLS) กรุณาแจ้งผู้ดูแลระบบให้รันไฟล์ 'supabase_setup.sql'");
-        } else {
-            alert(`เกิดข้อผิดพลาด: ${error.message}`);
-        }
+    } catch (err) {
+        setAuthError('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+        console.error(err);
     } finally {
-        setIsLoggingIn(false);
+        setAuthLoading(false);
     }
   };
 
-  const handleLogout = () => {
-      setConfirmModal({
-          isOpen: true,
-          title: 'ออกจากระบบ',
-          message: 'คุณต้องการออกจากระบบใช่หรือไม่?',
-          confirmText: 'ออก',
-          cancelText: 'ยกเลิก',
-          isDangerous: false,
-          onConfirm: () => {
-              localStorage.removeItem('repx_username');
-              setUserProfile(null);
-              setHistory([]);
-              setLoginForm({ 
-                  username: '', 
-                  displayName: '', 
-                  age: '', 
-                  weight: '', 
-                  height: '', 
-                  avatarUrl: PRESET_AVATARS[0],
-                  gender: 'male',
-                  activityLevel: 'moderate'
-              });
-              setIsLoginMode(true);
-              setConfirmModal(prev => ({ ...prev, isOpen: false }));
-          }
-      });
-  };
-
-  const handleCancelWorkout = () => {
-      setConfirmModal({
-          isOpen: true,
-          title: 'ยกเลิกการฝึกซ้อม',
-          message: 'คุณต้องการยกเลิกการฝึกซ้อมนี้ใช่หรือไม่? ความคืบหน้าปัจจุบันจะหายไป',
-          confirmText: 'ยกเลิกการฝึก',
-          cancelText: 'ออกกำลังกายต่อ',
-          isDangerous: true,
-          onConfirm: () => {
-              setActiveSession(null);
-              setConfirmModal(prev => ({ ...prev, isOpen: false }));
-          }
-      });
-  };
-
-  // Workout Logic
-  const startWorkout = (type: WorkoutType) => {
-    let exercises: Exercise[] = [];
-    let title = '';
-
-    if (type === 'Push') {
-      exercises = JSON.parse(JSON.stringify(PUSH_ROUTINE)); // Deep copy
-      title = 'Push Day';
-    } else if (type === 'Pull') {
-      exercises = JSON.parse(JSON.stringify(PULL_ROUTINE));
-      title = 'Pull Day';
-    } else if (type === 'Legs') {
-      exercises = JSON.parse(JSON.stringify(LEGS_ROUTINE));
-      title = 'Leg Day';
-    } else if (type === 'Custom') {
-      exercises = [{
-          id: crypto.randomUUID(),
-          name: 'New Exercise',
-          muscleGroup: 'Chest',
-          targetSets: 3,
-          targetReps: '10',
-          sets: createSets(3),
-      }];
-      title = 'Custom Workout';
-    }
-
-    const session: WorkoutSession = {
+  const startWorkout = (type: WorkoutType, routine: Exercise[]) => {
+    const newSession: WorkoutSession = {
       id: crypto.randomUUID(),
       type,
-      title,
-      date: new Date().toLocaleDateString('th-TH'),
+      title: `${type} Workout`,
+      date: new Date().toISOString(),
       startTime: Date.now(),
-      exercises,
-      status: 'active',
+      exercises: JSON.parse(JSON.stringify(routine)),
+      status: 'active'
     };
-
-    setActiveSession(session);
-    setActiveTab('workout');
+    setCurrentSession(newSession);
   };
 
-  const resumeHistorySession = (session: WorkoutSession) => {
-      const newSession = JSON.parse(JSON.stringify(session));
-      newSession.id = session.id; 
-      newSession.status = 'active';
-      newSession.startTime = Date.now(); 
-      delete newSession.endTime;
-      
-      setActiveSession(newSession);
-      setActiveTab('workout');
-  };
-
-  const addExercise = (templateName?: string, templateMuscleGroup?: any) => {
-    if (!activeSession) return;
-    const newExercise: Exercise = {
-        id: crypto.randomUUID(),
-        name: templateName || 'New Exercise',
-        muscleGroup: templateMuscleGroup || 'Chest', 
-        targetSets: 3,
-        targetReps: '10',
-        sets: createSets(3)
-    };
-    
-    setActiveSession(prev => {
-        if (!prev) return null;
-        return {
-            ...prev,
-            exercises: [...prev.exercises, newExercise]
-        };
-    });
-  };
-
-  const removeExercise = (exerciseId: string) => {
+  const endWorkout = () => {
       setConfirmModal({
-          isOpen: true,
-          title: 'ลบท่าออกกำลังกาย',
-          message: 'คุณต้องการลบท่านี้ออกจากตารางฝึกใช่หรือไม่?',
-          confirmText: 'ลบ',
-          cancelText: 'ยกเลิก',
-          isDangerous: true,
-          onConfirm: () => {
-               setActiveSession(prev => {
-                  if (!prev) return null;
-                  return {
-                      ...prev,
-                      exercises: prev.exercises.filter(ex => ex.id !== exerciseId)
-                  };
-              });
-              setConfirmModal(prev => ({ ...prev, isOpen: false }));
-          }
-      });
-  };
-
-  const updateSet = (exerciseId: string, updatedSet: WorkoutSet) => {
-    if (!activeSession) return;
-
-    setActiveSession((prev) => {
-      if (!prev) return null;
-      const updatedExercises = prev.exercises.map((ex) => {
-        if (ex.id === exerciseId) {
-          const updatedSets = ex.sets.map((s) => (s.id === updatedSet.id ? updatedSet : s));
-          return { ...ex, sets: updatedSets };
+        isOpen: true,
+        title: 'ยกเลิกการฝึกซ้อม?',
+        message: 'ข้อมูลการฝึกซ้อมปัจจุบันจะหายไป ยืนยันที่จะกลับสู่หน้าหลักหรือไม่?',
+        confirmText: 'กลับหน้าหลัก',
+        cancelText: 'ฝึกต่อ',
+        isDangerous: true,
+        onConfirm: () => {
+            setCurrentSession(null);
+            setView('home');
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
         }
-        return ex;
-      });
-      return { ...prev, exercises: updatedExercises };
-    });
-  };
-
-  const updateExerciseName = (exerciseId: string, newName: string) => {
-      if (!activeSession) return;
-      setActiveSession(prev => {
-          if (!prev) return null;
-          return {
-              ...prev,
-              exercises: prev.exercises.map(ex => ex.id === exerciseId ? { ...ex, name: newName } : ex)
-          }
-      })
-  };
-
-  const addSetToExercise = (exerciseId: string) => {
-    if (!activeSession) return;
-    setActiveSession(prev => {
-        if (!prev) return null;
-        return {
-            ...prev,
-            exercises: prev.exercises.map(ex => {
-                if (ex.id === exerciseId) {
-                    const lastSet = ex.sets[ex.sets.length - 1];
-                    const newSet: WorkoutSet = {
-                        id: crypto.randomUUID(),
-                        setNumber: ex.sets.length + 1,
-                        reps: lastSet ? lastSet.reps : '',
-                        weight: lastSet ? lastSet.weight : '',
-                        completed: false
-                    };
-                    return { ...ex, sets: [...ex.sets, newSet] };
-                }
-                return ex;
-            })
-        }
-    });
-  };
-
-  const finishWorkout = () => {
-    if (!activeSession) return;
-    setActiveSession(prev => prev ? { ...prev, endTime: Date.now() } : null);
-    setShowSummary(true);
-  };
-
-  const resumeWorkout = () => {
-      setShowSummary(false);
-      setActiveSession(prev => {
-          if (!prev) return null;
-          const { endTime, ...rest } = prev;
-          return rest as WorkoutSession;
       });
   };
 
   const saveWorkout = async () => {
-    if (!activeSession || !userProfile) return;
+      if (!currentSession) return;
+      
+      const completedSession: WorkoutSession = {
+          ...currentSession,
+          endTime: Date.now(),
+          status: 'completed'
+      };
 
-    const completedSession: WorkoutSession = {
-      ...activeSession,
-      status: 'completed',
-    };
-
-    if (isSupabaseConfigured) {
-        try {
-            const { error } = await supabase
-                .from('workouts')
-                .upsert({
-                    id: completedSession.id,
-                    user_id: userProfile.username,
-                    data: completedSession, 
-                    created_at: new Date().toISOString()
-                });
-
-            if (error) throw error;
-            fetchHistory(userProfile.username);
-
-        } catch (error: any) {
-            console.error("Save error:", error);
-            alert(`บันทึกไม่สำเร็จ: ${error.message}`);
-            return; 
-        }
-    } else {
-        setHistory(prev => [completedSession, ...prev]);
-    }
-
-    setActiveSession(null);
-    setShowSummary(false);
-    setActiveTab('dashboard');
-  };
-
-  const requestClearHistory = () => {
-      setConfirmModal({
-          isOpen: true,
-          title: 'ลบประวัติทั้งหมด',
-          message: 'คุณต้องการลบประวัติการฝึกซ้อมทั้งหมดใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้',
-          onConfirm: clearHistory,
-          isDangerous: true,
-          confirmText: 'ลบข้อมูล',
-          cancelText: 'ยกเลิก'
-      });
-  };
-
-  const clearHistory = async () => {
-    if (!userProfile) return;
-    if (isSupabaseConfigured) {
-        try {
-            const { error } = await supabase
-                .from('workouts')
-                .delete()
-                .eq('user_id', userProfile.username);
-            
-            if (error) throw error;
-        } catch (error) {
-            console.error("Clear history error:", error);
-            alert("ลบข้อมูลไม่สำเร็จ");
-        }
-    }
-    setHistory([]);
-    setActiveSession(null);
-    setShowSummary(false);
-    setActiveTab('workout');
-    setConfirmModal(prev => ({ ...prev, isOpen: false }));
-  };
-
-  const deleteHistoryItem = async (sessionId: string) => {
+      // Update Local State
+      setHistory(prev => [completedSession, ...prev]);
+      
+      // Save to Supabase
       if (isSupabaseConfigured) {
-          const { error } = await supabase.from('workouts').delete().eq('id', sessionId);
-          if (error) {
-              console.error("Delete item error:", error);
-              return;
-          }
+          await supabase.from('workouts').insert({
+              id: completedSession.id,
+              user_id: userProfile.username,
+              data: completedSession
+          });
       }
-      setHistory(prev => prev.filter(item => item.id !== sessionId));
+
+      setCurrentSession(null);
+      setView('history');
   };
 
-  // Filter History Logic
-  const getFilteredHistory = () => {
-      const now = new Date();
-      return history.filter(session => {
-          if (!session.endTime && !session.date) return false;
-          
-          const compareDate = session.startTime ? new Date(session.startTime) : new Date(); 
+  const updateSet = (exerciseId: string, updatedSet: WorkoutSet) => {
+    if (!currentSession) return;
+    const updatedExercises = currentSession.exercises.map(ex => {
+      if (ex.id === exerciseId) {
+        return {
+          ...ex,
+          sets: ex.sets.map(s => s.id === updatedSet.id ? updatedSet : s)
+        };
+      }
+      return ex;
+    });
+    setCurrentSession({ ...currentSession, exercises: updatedExercises });
+  };
 
-          const diffTime = Math.abs(now.getTime() - compareDate.getTime());
-          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const updateExerciseName = (exerciseId: string, newName: string) => {
+    if (!currentSession) return;
+    const updatedExercises = currentSession.exercises.map(ex => 
+      ex.id === exerciseId ? { ...ex, name: newName } : ex
+    );
+    setCurrentSession({ ...currentSession, exercises: updatedExercises });
+  };
 
-          switch (filterRange) {
-              case 'day': return diffDays <= 1;
-              case 'week': return diffDays <= 7;
-              case 'month': return diffDays <= 30;
-              case 'year': return diffDays <= 365;
-              default: return true;
-          }
-      });
+  const addSet = (exerciseId: string) => {
+    if (!currentSession) return;
+    const updatedExercises = currentSession.exercises.map(ex => {
+      if (ex.id === exerciseId) {
+        const lastSet = ex.sets[ex.sets.length - 1];
+        const newSetNumber = ex.sets.length + 1;
+        const newSet: WorkoutSet = {
+          id: crypto.randomUUID(),
+          setNumber: newSetNumber,
+          reps: lastSet ? lastSet.reps : '',
+          weight: lastSet ? lastSet.weight : '',
+          completed: false
+        };
+        return { ...ex, sets: [...ex.sets, newSet] };
+      }
+      return ex;
+    });
+    setCurrentSession({ ...currentSession, exercises: updatedExercises });
+  };
+
+  const removeExercise = (exerciseId: string) => {
+    if (!currentSession) return;
+    setConfirmModal({
+        isOpen: true,
+        title: 'ลบท่าออกกำลังกาย',
+        message: 'คุณต้องการลบท่านี้ออกจากตารางวันนี้ใช่หรือไม่?',
+        isDangerous: true,
+        onConfirm: () => {
+            const updatedExercises = currentSession.exercises.filter(ex => ex.id !== exerciseId);
+            setCurrentSession({ ...currentSession, exercises: updatedExercises });
+            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+        }
+    });
   };
 
   // --- Render Functions ---
 
-  const renderLoginScreen = () => (
-    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/20 rounded-full blur-[100px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/20 rounded-full blur-[100px]" />
+  const renderAuthScreen = () => (
+    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        {/* Background Accents */}
+        <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-blue-600/20 rounded-full blur-[80px]" />
+        <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-purple-600/20 rounded-full blur-[80px]" />
 
-        <div className="relative z-10 w-full max-w-sm bg-slate-800/50 backdrop-blur-xl border border-slate-700 p-8 rounded-3xl shadow-2xl overflow-y-auto max-h-[90vh] no-scrollbar">
-            <div className="text-center mb-6">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-lg shadow-blue-900/50 transform rotate-3">
-                    <Dumbbell size={32} className="text-white" />
+        <div className="w-full max-w-md space-y-8 relative z-10">
+            <div className="text-center space-y-2">
+                <div className="inline-flex bg-gradient-to-tr from-blue-600 to-indigo-600 p-4 rounded-2xl shadow-xl mb-4">
+                    <Dumbbell className="text-white w-10 h-10" />
                 </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                    REPx
-                </h1>
-                <p className="text-slate-400 text-xs mt-1">Personal Fitness Tracker</p>
+                <h1 className="text-3xl font-bold text-white tracking-tight">REPx By FUUYARP</h1>
+                <p className="text-slate-400">บันทึก พัฒนา และก้าวข้ามขีดจำกัด</p>
             </div>
 
-            <div className="space-y-4">
-                <div className="flex bg-slate-900/50 p-1 rounded-xl mb-4 border border-slate-700">
+            <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-6 rounded-2xl shadow-xl">
+                <div className="flex bg-slate-800 p-1 rounded-xl mb-6">
                     <button 
-                        onClick={() => setIsLoginMode(false)}
-                        className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${!isLoginMode ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                        onClick={() => { setAuthMode('login'); setAuthError(''); }}
+                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${authMode === 'login' ? 'bg-slate-700 text-white shadow' : 'text-slate-400'}`}
                     >
-                        สมัครใหม่
+                        <LogIn size={16} /> เข้าสู่ระบบ
                     </button>
                     <button 
-                        onClick={() => setIsLoginMode(true)}
-                        className={`flex-1 py-2 text-xs font-medium rounded-lg transition-all ${isLoginMode ? 'bg-slate-700 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                        onClick={() => { setAuthMode('register'); setAuthError(''); }}
+                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${authMode === 'register' ? 'bg-blue-600 text-white shadow' : 'text-slate-400'}`}
                     >
-                        เข้าสู่ระบบ
+                        <UserPlus size={16} /> สมัครใหม่
                     </button>
                 </div>
 
-                {!isLoginMode && (
-                    <div className="mb-4">
-                        <label className="text-xs text-slate-400 mb-2 block text-center">เลือกตัวละครของคุณ</label>
-                        <div className="flex justify-center mb-3">
-                             <div className="w-20 h-20 rounded-full border-4 border-slate-700 overflow-hidden bg-slate-900 shadow-xl relative group">
-                                <img src={loginForm.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
-                             </div>
-                        </div>
-                        <div className="grid grid-cols-4 gap-2">
-                            {PRESET_AVATARS.map((url, idx) => (
-                                <button 
-                                    key={idx}
-                                    onClick={() => setLoginForm({...loginForm, avatarUrl: url})}
-                                    className={`relative w-full aspect-square rounded-full border-2 overflow-hidden transition-all ${loginForm.avatarUrl === url ? 'border-blue-500 ring-2 ring-blue-500/50 scale-105' : 'border-slate-700 opacity-60 hover:opacity-100 hover:scale-105'}`}
-                                >
-                                    <img src={url} alt={`Avatar ${idx}`} className="w-full h-full object-cover" />
-                                    {loginForm.avatarUrl === url && (
-                                        <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
-                                            <Check size={16} className="text-white drop-shadow-md" strokeWidth={3} />
-                                        </div>
-                                    )}
-                                </button>
-                            ))}
-                        </div>
+                <div className="space-y-4">
+                    <div>
+                        <label className="text-xs font-medium text-slate-400 ml-1">ชื่อผู้ใช้ (Username)</label>
+                        <input 
+                            type="text" 
+                            value={userProfile.username}
+                            onChange={(e) => setUserProfile({...userProfile, username: e.target.value.toLowerCase().replace(/\s/g, '')})}
+                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none mt-1"
+                            placeholder="กรอกชื่อผู้ใช้ภาษาอังกฤษ..."
+                        />
                     </div>
-                )}
 
-                <div>
-                    <label className="text-xs font-medium text-slate-400 ml-1">ชื่อผู้ใช้ (Username)</label>
-                    <input 
-                        type="text" 
-                        value={loginForm.username}
-                        onChange={(e) => setLoginForm({...loginForm, username: e.target.value})}
-                        className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all mt-1 text-sm"
-                        placeholder="กรอกชื่อผู้ใช้..."
-                    />
-                </div>
-
-                {!isLoginMode && (
-                    <>
-                        <div>
-                            <label className="text-xs font-medium text-slate-400 ml-1">ชื่อเล่น (Display Name)</label>
-                            <input 
-                                type="text" 
-                                value={loginForm.displayName}
-                                onChange={(e) => setLoginForm({...loginForm, displayName: e.target.value})}
-                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all mt-1 text-sm"
-                                placeholder="ชื่อเล่นของคุณ..."
-                            />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-3">
+                    {authMode === 'register' && (
+                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
                              <div>
-                                <label className="text-xs font-medium text-slate-400 ml-1">เพศ</label>
+                                <label className="text-xs font-medium text-slate-400 ml-1">ชื่อเล่น / ชื่อที่แสดง</label>
+                                <input 
+                                    type="text" 
+                                    value={userProfile.displayName}
+                                    onChange={(e) => setUserProfile({...userProfile, displayName: e.target.value})}
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none mt-1"
+                                    placeholder="ชื่อเล่นของคุณ..."
+                                />
+                            </div>
+
+                            {/* Gender Selection */}
+                            <div>
+                                <label className="text-xs font-medium text-slate-400 ml-1">เพศ (สำหรับคำนวณค่าพลังงาน)</label>
+                                <div className="grid grid-cols-2 gap-3 mt-1">
+                                    <button
+                                        onClick={() => setUserProfile({...userProfile, gender: 'male'})}
+                                        className={`py-3 px-4 rounded-xl border flex items-center justify-center gap-2 transition-all ${userProfile.gender === 'male' ? 'bg-blue-600/20 border-blue-500 text-blue-400' : 'bg-slate-950 border-slate-700 text-slate-500 hover:border-slate-600'}`}
+                                    >
+                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${userProfile.gender === 'male' ? 'border-blue-500' : 'border-slate-600'}`}>
+                                            {userProfile.gender === 'male' && <div className="w-2 h-2 rounded-full bg-blue-500" />}
+                                        </div>
+                                        ชาย
+                                    </button>
+                                    <button
+                                        onClick={() => setUserProfile({...userProfile, gender: 'female'})}
+                                        className={`py-3 px-4 rounded-xl border flex items-center justify-center gap-2 transition-all ${userProfile.gender === 'female' ? 'bg-pink-600/20 border-pink-500 text-pink-400' : 'bg-slate-950 border-slate-700 text-slate-500 hover:border-slate-600'}`}
+                                    >
+                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${userProfile.gender === 'female' ? 'border-pink-500' : 'border-slate-600'}`}>
+                                            {userProfile.gender === 'female' && <div className="w-2 h-2 rounded-full bg-pink-500" />}
+                                        </div>
+                                        หญิง
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-3 gap-3">
+                                <div>
+                                    <label className="text-xs font-medium text-slate-400 ml-1">อายุ (ปี)</label>
+                                    <input type="number" value={userProfile.age} onChange={(e) => setUserProfile({...userProfile, age: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-slate-400 ml-1">นน. (kg)</label>
+                                    <input type="number" value={userProfile.weight} onChange={(e) => setUserProfile({...userProfile, weight: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1" />
+                                </div>
+                                <div>
+                                    <label className="text-xs font-medium text-slate-400 ml-1">สูง (cm)</label>
+                                    <input type="number" value={userProfile.height} onChange={(e) => setUserProfile({...userProfile, height: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1" />
+                                </div>
+                            </div>
+
+                            <div>
+                                <label className="text-xs font-medium text-slate-400 ml-1">ระดับกิจกรรม</label>
                                 <select 
-                                    value={loginForm.gender} 
-                                    onChange={(e) => setLoginForm({...loginForm, gender: e.target.value as Gender})}
-                                    className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none mt-1 text-sm appearance-none"
+                                    value={userProfile.activityLevel}
+                                    onChange={(e) => setUserProfile({...userProfile, activityLevel: e.target.value as ActivityLevel})}
+                                    className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-3 mt-1 outline-none"
                                 >
-                                    <option value="male">ชาย</option>
-                                    <option value="female">หญิง</option>
+                                    <option value="sedentary">ไม่ออกกำลังกาย (Sedentary)</option>
+                                    <option value="light">ออกเล็กน้อย 1-3 วัน/สัปดาห์</option>
+                                    <option value="moderate">ปานกลาง 3-5 วัน/สัปดาห์</option>
+                                    <option value="active">หนัก 6-7 วัน/สัปดาห์</option>
+                                    <option value="very_active">หนักมาก (นักกีฬา)</option>
                                 </select>
                             </div>
+
                             <div>
-                                <label className="text-xs font-medium text-slate-400 ml-1">อายุ</label>
-                                <input type="number" value={loginForm.age} onChange={(e) => setLoginForm({...loginForm, age: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1 text-sm" placeholder="ปี" />
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-3">
-                            <div>
-                                <label className="text-xs font-medium text-slate-400 ml-1">น้ำหนัก (kg)</label>
-                                <input type="number" value={loginForm.weight} onChange={(e) => setLoginForm({...loginForm, weight: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1 text-sm" placeholder="kg" />
-                            </div>
-                            <div>
-                                <label className="text-xs font-medium text-slate-400 ml-1">ส่วนสูง (cm)</label>
-                                <input type="number" value={loginForm.height} onChange={(e) => setLoginForm({...loginForm, height: e.target.value})} className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1 text-sm" placeholder="cm" />
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="text-xs font-medium text-slate-400 ml-1">กิจกรรม</label>
-                            <select 
-                                value={loginForm.activityLevel} 
-                                onChange={(e) => setLoginForm({...loginForm, activityLevel: e.target.value as ActivityLevel})}
-                                className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-3 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none mt-1 text-sm appearance-none"
-                            >
-                                <option value="sedentary">ไม่ออกกำลังกาย</option>
-                                <option value="light">เล็กน้อย (1-3 วัน/สัปดาห์)</option>
-                                <option value="moderate">ปานกลาง (3-5 วัน/สัปดาห์)</option>
-                                <option value="active">หนัก (6-7 วัน/สัปดาห์)</option>
-                                <option value="very_active">หนักมาก (นักกีฬา/งานใช้แรง)</option>
-                            </select>
-                        </div>
-                    </>
-                )}
-
-                <button 
-                    onClick={handleLogin}
-                    disabled={isLoggingIn}
-                    className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 transform transition-all active:scale-95 mt-4 flex items-center justify-center gap-2"
-                >
-                    {isLoggingIn ? <Loader2 className="animate-spin" /> : (isLoginMode ? 'เข้าสู่ระบบ' : 'เริ่มใช้งาน')}
-                </button>
-            </div>
-        </div>
-    </div>
-  );
-
-  const renderSelectionScreen = () => (
-    <div className="p-4 pb-24 max-w-md mx-auto animate-in fade-in duration-500">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-            <h1 className="text-2xl font-bold italic tracking-tighter text-white">REPx <span className="text-xs font-normal text-slate-400 not-italic">By FUUYARP</span></h1>
-            <p className="text-slate-400 text-xs">เลือกโปรแกรมฝึกของคุณวันนี้</p>
-        </div>
-        <div className="flex items-center gap-3">
-             <div className="bg-slate-800 p-1 pl-3 pr-1 rounded-full border border-slate-700 flex items-center gap-2">
-                <span className="text-xs font-medium text-white">{userProfile?.displayName}</span>
-                <img src={userProfile?.avatarUrl} alt="Profile" className="w-8 h-8 rounded-full border border-slate-600" />
-             </div>
-        </div>
-      </div>
-
-      <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-6 mb-8 text-center relative overflow-hidden group">
-         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-            <MessageCircle size={64} />
-         </div>
-         <p className="text-slate-300 italic font-light text-lg relative z-10">"{quote}"</p>
-         <button 
-            onClick={() => setIsCoachOpen(true)}
-            className="mt-4 text-xs flex items-center justify-center gap-2 mx-auto text-blue-400 hover:text-blue-300 transition-colors"
-         >
-            <MessageCircle size={14} />
-            ปรึกษา AI Coach
-         </button>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4">
-        <button
-          onClick={() => startWorkout('Push')}
-          className="bg-gradient-to-r from-red-600 to-red-800 hover:from-red-500 hover:to-red-700 text-white rounded-2xl p-6 shadow-lg shadow-red-900/30 transform transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-4">
-            <div className="bg-white/10 p-3 rounded-xl group-hover:bg-white/20 transition-colors">
-                <Flame size={32} />
-            </div>
-            <div className="text-left">
-              <h2 className="text-2xl font-bold italic">PUSH DAY</h2>
-              <p className="text-red-200 text-xs">อก • ไหล่ • หลังแขน</p>
-            </div>
-          </div>
-          <div className="bg-white/20 p-2 rounded-full">
-            <Plus size={24} />
-          </div>
-        </button>
-
-        <button
-          onClick={() => startWorkout('Pull')}
-          className="bg-gradient-to-r from-blue-600 to-blue-800 hover:from-blue-500 hover:to-blue-700 text-white rounded-2xl p-6 shadow-lg shadow-blue-900/30 transform transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-4">
-            <div className="bg-white/10 p-3 rounded-xl group-hover:bg-white/20 transition-colors">
-                <Anchor size={32} />
-            </div>
-            <div className="text-left">
-              <h2 className="text-2xl font-bold italic">PULL DAY</h2>
-              <p className="text-blue-200 text-xs">หลัง • ไหล่หลัง • หน้าแขน</p>
-            </div>
-          </div>
-          <div className="bg-white/20 p-2 rounded-full">
-            <Plus size={24} />
-          </div>
-        </button>
-
-        <button
-          onClick={() => startWorkout('Legs')}
-          className="bg-gradient-to-r from-emerald-600 to-emerald-800 hover:from-emerald-500 hover:to-emerald-700 text-white rounded-2xl p-6 shadow-lg shadow-emerald-900/30 transform transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-4">
-            <div className="bg-white/10 p-3 rounded-xl group-hover:bg-white/20 transition-colors">
-                <Zap size={32} />
-            </div>
-            <div className="text-left">
-              <h2 className="text-2xl font-bold italic">LEG DAY</h2>
-              <p className="text-emerald-200 text-xs">ขา • น่อง • ท้อง</p>
-            </div>
-          </div>
-          <div className="bg-white/20 p-2 rounded-full">
-            <Plus size={24} />
-          </div>
-        </button>
-
-        <button
-          onClick={() => startWorkout('Custom')}
-          className="bg-gradient-to-r from-purple-600 to-purple-800 hover:from-purple-500 hover:to-purple-700 text-white rounded-2xl p-6 shadow-lg shadow-purple-900/30 transform transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-between group"
-        >
-          <div className="flex items-center gap-4">
-            <div className="bg-white/10 p-3 rounded-xl group-hover:bg-white/20 transition-colors">
-                <Settings size={32} />
-            </div>
-            <div className="text-left">
-              <h2 className="text-2xl font-bold italic">CUSTOM</h2>
-              <p className="text-purple-200 text-xs">กำหนดเอง</p>
-            </div>
-          </div>
-          <div className="bg-white/20 p-2 rounded-full">
-            <Plus size={24} />
-          </div>
-        </button>
-      </div>
-    </div>
-  );
-
-  const renderActiveSession = () => {
-    if (!activeSession) return null;
-
-    return (
-      <div className="pb-24 max-w-md mx-auto animate-in slide-in-from-bottom-10 duration-500">
-        <div className="bg-slate-900/80 backdrop-blur-md sticky top-0 z-40 px-4 py-4 border-b border-slate-800 flex justify-between items-center mb-4">
-            <div className="flex items-center gap-2">
-                <button 
-                    onClick={handleCancelWorkout}
-                    className="p-2 -ml-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-                >
-                    <ChevronLeft size={24} />
-                </button>
-                <div>
-                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
-                        {activeSession.type === 'Push' ? <Flame className="text-red-500" /> : 
-                        activeSession.type === 'Pull' ? <Anchor className="text-blue-500" /> : 
-                        activeSession.type === 'Legs' ? <Zap className="text-emerald-500" /> :
-                        <Settings className="text-purple-500" />}
-                        {activeSession.title}
-                    </h2>
-                    <div className="flex items-center gap-2 text-slate-400 text-xs mt-1">
-                        <CalendarClock size={12} />
-                        <span>{activeSession.date}</span>
-                        <span className="mx-1">•</span>
-                        <Timer size={12} />
-                        <span>{formatDuration(activeSession.startTime, Date.now())} (Running)</span>
-                    </div>
-                </div>
-            </div>
-            <button 
-                onClick={finishWorkout}
-                className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl font-bold shadow-lg shadow-emerald-900/20 text-sm"
-            >
-                จบการฝึก
-            </button>
-        </div>
-
-        <div className="px-4">
-            {activeSession.exercises.map((exercise) => (
-            <ExerciseCard
-                key={exercise.id}
-                exercise={exercise}
-                onUpdateSet={updateSet}
-                onUpdateName={updateExerciseName}
-                onAddSet={addSetToExercise}
-                onRemove={removeExercise}
-            />
-            ))}
-            
-            <div className="mt-6 mb-8">
-                {suggestedExercises.length > 0 && (
-                    <div className="mb-3">
-                         <div className="relative">
-                            <select
-                                className="w-full bg-slate-800 text-white border border-slate-700 rounded-xl px-4 py-3 appearance-none focus:outline-none focus:border-blue-500 text-sm"
-                                onChange={(e) => {
-                                    if (e.target.value) {
-                                        const selected = suggestedExercises.find(ex => ex.name === e.target.value);
-                                        if (selected) {
-                                            addExercise(selected.name, selected.muscleGroup);
-                                            e.target.value = ""; 
-                                        }
-                                    }
-                                }}
-                                defaultValue=""
-                            >
-                                <option value="" disabled>+ เลือกท่าจากประวัติการฝึก...</option>
-                                {suggestedExercises.map((ex, idx) => (
-                                    <option key={idx} value={ex.name}>{ex.name}</option>
-                                ))}
-                            </select>
-                            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                                <ChevronDown size={16} />
-                            </div>
-                         </div>
-                    </div>
-                )}
-
-                <button
-                    onClick={() => addExercise()}
-                    className="w-full py-4 rounded-xl border-2 border-dashed border-slate-700 text-slate-400 hover:text-white hover:border-slate-500 hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
-                >
-                    <Plus size={20} />
-                    เพิ่มท่าออกกำลังกายใหม่
-                </button>
-            </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderSummary = () => {
-    if (!activeSession) return null;
-    const totalVolume = calculateTotalVolume(activeSession.exercises);
-    const duration = formatDuration(activeSession.startTime, activeSession.endTime);
-    
-    // Filter out exercises that have at least one completed set
-    const playedExercises = activeSession.exercises.filter(ex => ex.sets.some(s => s.completed));
-
-    return (
-      <div className="p-6 pb-24 max-w-md mx-auto animate-in zoom-in-95 duration-300">
-        <div className="text-center mb-8">
-            <div className="w-20 h-20 bg-yellow-500/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
-                <Trophy size={40} className="text-yellow-500" />
-            </div>
-            <h2 className="text-3xl font-bold text-white mb-2">เยี่ยมมาก!</h2>
-            <p className="text-slate-400">คุณทำสำเร็จแล้ว วันนี้สุดยอดมาก</p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 mb-8">
-            <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
-                <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">เวลาที่ใช้</p>
-                <p className="text-2xl font-bold text-white">{duration}</p>
-            </div>
-            <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
-                <p className="text-slate-400 text-xs uppercase tracking-wider mb-1">น้ำหนักรวม</p>
-                <p className="text-2xl font-bold text-blue-400">{(totalVolume).toLocaleString()} <span className="text-sm text-slate-500">kg</span></p>
-            </div>
-        </div>
-
-        <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700 mb-8">
-            <h3 className="text-white font-bold mb-4 flex items-center gap-2">
-                <BarChart3 size={18} className="text-blue-400"/> รายละเอียดการฝึก
-            </h3>
-            <div className="space-y-4">
-                {playedExercises.length === 0 ? (
-                    <p className="text-slate-500 text-center text-sm py-4">ไม่ได้เล่นท่าไหนเลย</p>
-                ) : (
-                    playedExercises.map((ex, idx) => (
-                        <div key={idx} className="border-b border-slate-700 last:border-0 pb-3 last:pb-0">
-                            <div className="flex justify-between items-start mb-2">
-                                <span className="text-slate-200 font-medium">{ex.name}</span>
-                                <span className="text-xs px-2 py-0.5 rounded bg-slate-700 text-slate-400">{ex.sets.filter(s => s.completed).length} sets</span>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                {ex.sets.filter(s => s.completed).map((s, sIdx) => (
-                                    <span key={sIdx} className="text-xs bg-slate-900 text-slate-400 px-2 py-1 rounded border border-slate-700">
-                                        {s.weight}kg x {s.reps}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    ))
-                )}
-            </div>
-        </div>
-
-        <div className="flex gap-3">
-             <button 
-                onClick={resumeWorkout}
-                className="flex-1 bg-slate-700 hover:bg-slate-600 text-white py-4 rounded-xl font-bold transition-all flex items-center justify-center gap-2"
-            >
-                <ChevronLeft size={20} />
-                กลับไปแก้ไข
-            </button>
-            <button 
-                onClick={saveWorkout}
-                className="flex-[2] bg-blue-600 hover:bg-blue-500 text-white py-4 rounded-xl font-bold shadow-lg shadow-blue-900/30 transform transition-all hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
-            >
-                <Save size={20} />
-                บันทึกผล
-            </button>
-        </div>
-      </div>
-    );
-  };
-
-  const renderHistoryDetail = () => {
-    if (!viewingSession) return null;
-    
-    // Calculate stats specifically for this viewing session
-    const totalVolume = calculateTotalVolume(viewingSession.exercises);
-    const duration = formatDuration(viewingSession.startTime, viewingSession.endTime);
-    // Filter only exercises that had activity
-    const playedExercises = viewingSession.exercises.filter(ex => ex.sets.some(s => s.completed));
-
-    return (
-        <div className="p-6 pb-24 max-w-md mx-auto animate-in slide-in-from-right duration-300">
-            {/* Header */}
-            <div className="flex items-center gap-3 mb-6">
-                <button 
-                    onClick={() => setViewingSession(null)}
-                    className="p-2 -ml-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
-                >
-                    <ChevronLeft size={24} />
-                </button>
-                <div>
-                    <h1 className="text-xl font-bold text-white">รายละเอียดการฝึก</h1>
-                    <p className="text-slate-400 text-xs flex items-center gap-2 mt-0.5">
-                        <Calendar size={12} /> {viewingSession.date}
-                    </p>
-                </div>
-            </div>
-
-            {/* Session Info Card */}
-            <div className="bg-slate-800 p-5 rounded-2xl border border-slate-700 mb-6 flex justify-between items-center">
-                 <div className="flex items-center gap-4">
-                    <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                        viewingSession.type === 'Push' ? 'bg-red-900/20 text-red-500' :
-                        viewingSession.type === 'Pull' ? 'bg-blue-900/20 text-blue-500' :
-                        viewingSession.type === 'Legs' ? 'bg-emerald-900/20 text-emerald-500' :
-                        'bg-purple-900/20 text-purple-500'
-                    }`}>
-                        {viewingSession.type === 'Push' ? <Flame size={24} /> :
-                         viewingSession.type === 'Pull' ? <Anchor size={24} /> :
-                         viewingSession.type === 'Legs' ? <Zap size={24} /> :
-                         <Settings size={24} />}
-                    </div>
-                    <div>
-                        <h2 className="text-lg font-bold text-white">{viewingSession.title}</h2>
-                        <p className="text-slate-400 text-xs">{viewingSession.type}</p>
-                    </div>
-                 </div>
-            </div>
-
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                    <div className="flex items-center gap-2 mb-2 text-slate-400 text-xs uppercase tracking-wider">
-                        <Timer size={14} /> เวลาที่ใช้
-                    </div>
-                    <p className="text-2xl font-bold text-white">{duration}</p>
-                </div>
-                <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700">
-                     <div className="flex items-center gap-2 mb-2 text-slate-400 text-xs uppercase tracking-wider">
-                        <Dumbbell size={14} /> น้ำหนักรวม
-                    </div>
-                    <p className="text-2xl font-bold text-blue-400">{(totalVolume).toLocaleString()} <span className="text-sm text-slate-500">kg</span></p>
-                </div>
-            </div>
-
-            {/* Exercises List */}
-            <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700">
-                <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm">
-                    <BarChart3 size={18} className="text-slate-400"/> รายการท่าที่เล่น
-                </h3>
-                <div className="space-y-6">
-                    {playedExercises.length === 0 ? (
-                        <p className="text-slate-500 text-center text-sm py-4">ไม่มีข้อมูลการเล่นในรายการนี้</p>
-                    ) : (
-                        playedExercises.map((ex, idx) => (
-                            <div key={idx} className="border-b border-slate-700 last:border-0 pb-4 last:pb-0">
-                                <div className="mb-3">
-                                    <h4 className="text-slate-200 font-bold text-sm">{ex.name}</h4>
-                                </div>
-                                <div className="grid grid-cols-3 gap-2">
-                                    {ex.sets.filter(s => s.completed).map((s, sIdx) => (
-                                        <div key={sIdx} className="bg-slate-900 rounded-lg p-2 border border-slate-700 flex flex-col items-center">
-                                            <span className="text-[10px] text-slate-500 font-bold mb-0.5">SET {sIdx + 1}</span>
-                                            <span className="text-white font-bold text-sm">{s.weight} <span className="text-[10px] text-slate-500 font-normal">kg</span></span>
-                                            <span className="text-xs text-slate-400">x {s.reps}</span>
-                                        </div>
+                                <label className="text-xs font-medium text-slate-400 ml-1 mb-2 block">เลือกรูปแทนตัว</label>
+                                <div className="grid grid-cols-4 gap-2">
+                                    {PRESET_AVATARS.map((url, index) => (
+                                        <button
+                                            key={index}
+                                            onClick={() => setUserProfile({...userProfile, avatarUrl: url})}
+                                            className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${userProfile.avatarUrl === url ? 'border-blue-500 scale-105 shadow-lg shadow-blue-500/20' : 'border-slate-700 opacity-60 hover:opacity-100'}`}
+                                        >
+                                            <img src={url} alt={`Avatar ${index}`} className="w-full h-full object-cover" />
+                                        </button>
                                     ))}
                                 </div>
                             </div>
-                        ))
+                        </div>
                     )}
+
+                    {authError && (
+                        <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-xl text-sm text-center">
+                            {authError}
+                        </div>
+                    )}
+
+                    <button 
+                        onClick={handleAuth}
+                        disabled={authLoading}
+                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {authLoading ? (
+                            <> <Loader2 className="animate-spin" /> กำลังโหลด... </>
+                        ) : (
+                            <> {authMode === 'login' ? 'เข้าสู่ระบบ' : 'เริ่มใช้งานทันที'} <ArrowRight size={20} /> </>
+                        )}
+                    </button>
                 </div>
             </div>
-        </div>
-    );
-  };
-
-  const renderDashboard = () => {
-    const filteredHistory = getFilteredHistory();
-    const totalSessions = filteredHistory.length;
-    // Calculate total duration in minutes
-    const totalMinutes = filteredHistory.reduce((acc, session) => {
-        if (session.startTime && session.endTime) {
-            return acc + Math.floor((session.endTime - session.startTime) / 60000);
-        }
-        return acc;
-    }, 0);
-
-    const pushCount = filteredHistory.filter(s => s.type === 'Push').length;
-    const pullCount = filteredHistory.filter(s => s.type === 'Pull').length;
-    const legsCount = filteredHistory.filter(s => s.type === 'Legs').length;
-    const customCount = filteredHistory.filter(s => s.type === 'Custom').length;
-
-    return (
-      <div className="p-4 pb-24 max-w-md mx-auto animate-in fade-in duration-500">
-        <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-white">ภาพรวม <span className="text-blue-500">.</span></h1>
             
-            <div className="flex items-center gap-2">
-                {!isSupabaseConfigured && (
-                    <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-500 text-xs px-2 py-1 rounded flex items-center gap-1">
-                        <AlertTriangle size={12} /> Offline
-                    </div>
-                )}
-                <button 
-                    onClick={requestClearHistory}
-                    className="p-2 bg-slate-800 text-slate-400 rounded-lg hover:bg-red-900/20 hover:text-red-500 transition-colors"
-                >
-                    <Trash2 size={20} />
-                </button>
-            </div>
-        </div>
-
-        {/* Filter Bar */}
-        <div className="flex bg-slate-800 p-1 rounded-xl mb-6 overflow-x-auto no-scrollbar">
-             {['all', 'day', 'week', 'month', 'year'].map((range) => (
-                 <button
-                    key={range}
-                    onClick={() => setFilterRange(range as any)}
-                    className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-medium whitespace-nowrap transition-all ${filterRange === range ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                 >
-                    {range === 'all' ? 'ทั้งหมด' : range === 'day' ? 'วันนี้' : range === 'week' ? 'สัปดาห์นี้' : range === 'month' ? 'เดือนนี้' : 'ปีนี้'}
-                 </button>
-             ))}
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="bg-gradient-to-br from-blue-900/40 to-slate-900 border border-blue-500/20 p-4 rounded-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-3 opacity-10"><Trophy size={40} /></div>
-                <p className="text-blue-400 text-xs font-bold uppercase tracking-wider mb-1">การฝึกทั้งหมด</p>
-                <p className="text-3xl font-bold text-white">{totalSessions}</p>
-                <p className="text-slate-500 text-xs mt-1">ครั้ง</p>
-            </div>
-            <div className="bg-gradient-to-br from-purple-900/40 to-slate-900 border border-purple-500/20 p-4 rounded-2xl relative overflow-hidden">
-                 <div className="absolute top-0 right-0 p-3 opacity-10"><Timer size={40} /></div>
-                <p className="text-purple-400 text-xs font-bold uppercase tracking-wider mb-1">เวลาฝึกรวม</p>
-                <p className="text-3xl font-bold text-white">
-                    {totalMinutes < 60 
-                        ? totalMinutes 
-                        : (totalMinutes / 60).toFixed(1)
-                    }
+            {!isSupabaseConfigured && (
+                <p className="text-center text-xs text-yellow-500/80">
+                    ⚠️ ยังไม่ได้เชื่อมต่อ Database (ข้อมูลจะหายเมื่อรีเฟรช)
                 </p>
-                <p className="text-slate-500 text-xs mt-1">
-                    {totalMinutes < 60 ? 'นาที' : 'ชั่วโมง'}
-                </p>
-            </div>
+            )}
         </div>
+    </div>
+  );
 
-        {/* Workout Distribution */}
-        <div className="bg-slate-800/50 border border-slate-700 rounded-2xl p-5 mb-6">
-            <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm">
-                <BarChart3 size={16} className="text-slate-400"/> สัดส่วนการฝึก
-            </h3>
-            <div className="flex h-4 rounded-full overflow-hidden mb-3">
-                <div style={{width: `${(pushCount/totalSessions)*100}%`}} className="bg-red-500 h-full" />
-                <div style={{width: `${(pullCount/totalSessions)*100}%`}} className="bg-blue-500 h-full" />
-                <div style={{width: `${(legsCount/totalSessions)*100}%`}} className="bg-emerald-500 h-full" />
-                <div style={{width: `${(customCount/totalSessions)*100}%`}} className="bg-purple-500 h-full" />
-            </div>
-            <div className="flex justify-between text-xs text-slate-400 px-1">
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-red-500"/> Push</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"/> Pull</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500"/> Legs</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500"/> Custom</div>
-            </div>
+  const renderHome = () => (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 shadow-xl text-white relative overflow-hidden">
+        <div className="relative z-10">
+          <h2 className="text-2xl font-bold mb-2">ยินดีต้อนรับ, {userProfile.displayName}</h2>
+          <p className="opacity-90 italic">"{quote}"</p>
         </div>
+        <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-4 translate-y-4">
+          <Dumbbell size={120} />
+        </div>
+      </div>
 
-        {/* Recent History List */}
-        <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm px-1">
-            <HistoryIcon size={16} className="text-slate-400"/> ประวัติการฝึก ({filteredHistory.length})
+      <div>
+        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Play size={20} className="text-blue-500" />
+          เริ่มออกกำลังกาย
         </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[
+            { id: 'push', name: 'Push Day', routine: PUSH_ROUTINE, color: 'from-orange-500 to-red-500' },
+            { id: 'pull', name: 'Pull Day', routine: PULL_ROUTINE, color: 'from-blue-500 to-cyan-500' },
+            { id: 'legs', name: 'Leg Day', routine: LEGS_ROUTINE, color: 'from-emerald-500 to-green-500' },
+          ].map((item) => (
+            <button
+              key={item.id}
+              onClick={() => startWorkout(item.name as WorkoutType, item.routine)}
+              className="relative group overflow-hidden rounded-xl h-32 text-left transition-all hover:scale-[1.02]"
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-90 group-hover:opacity-100 transition-opacity`} />
+              <div className="absolute inset-0 p-5 flex flex-col justify-between z-10">
+                <span className="text-2xl font-bold text-white">{item.name}</span>
+                <span className="text-white/80 text-sm flex items-center gap-1">
+                  เริ่มเลย <ChevronLeft className="rotate-180" size={14} />
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderWorkout = () => {
+    if (!currentSession) return null;
+    return (
+      <div className="space-y-4 pb-20">
+        <div className="flex justify-between items-center mb-6">
+            <button 
+                onClick={endWorkout}
+                className="text-slate-400 hover:text-white flex items-center gap-1 text-sm font-medium"
+            >
+                <ChevronLeft size={20} /> กลับหน้าหลัก
+            </button>
+          <button 
+            onClick={saveWorkout}
+            className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-900/20 transition-all active:scale-95"
+          >
+            บันทึกผล
+          </button>
+        </div>
         
-        {isLoadingHistory ? (
-             <div className="flex justify-center py-10">
-                 <Loader2 className="animate-spin text-blue-500" />
-             </div>
-        ) : filteredHistory.length === 0 ? (
-            <div className="text-center py-10 bg-slate-800/30 rounded-2xl border border-dashed border-slate-700">
-                <p className="text-slate-500 text-sm">ยังไม่มีประวัติการฝึกในช่วงเวลานี้</p>
-            </div>
-        ) : (
-            <div className="space-y-3">
-                {filteredHistory.map((session) => (
-                    <div 
-                        key={session.id} 
-                        onClick={() => setViewingSession(session)} 
-                        className="bg-slate-800 p-4 rounded-xl border border-slate-700 flex justify-between items-center group hover:border-blue-500/50 cursor-pointer transition-colors active:scale-98"
-                    >
-                        <div className="flex items-center gap-4">
-                            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                                session.type === 'Push' ? 'bg-red-900/20 text-red-500' :
-                                session.type === 'Pull' ? 'bg-blue-900/20 text-blue-500' :
-                                session.type === 'Legs' ? 'bg-emerald-900/20 text-emerald-500' :
-                                'bg-purple-900/20 text-purple-500'
-                            }`}>
-                                {session.type === 'Push' ? <Flame size={20} /> :
-                                 session.type === 'Pull' ? <Anchor size={20} /> :
-                                 session.type === 'Legs' ? <Zap size={20} /> :
-                                 <Settings size={20} />}
-                            </div>
-                            <div>
-                                <h4 className="text-white font-bold text-sm">{session.title}</h4>
-                                <p className="text-slate-400 text-xs flex items-center gap-2 mt-0.5">
-                                    <span>{session.date}</span>
-                                    <span>•</span>
-                                    <span>{(calculateTotalVolume(session.exercises)).toLocaleString()} kg</span>
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                             <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    resumeHistorySession(session);
-                                }}
-                                className="p-2 bg-slate-700 text-slate-400 rounded-lg hover:bg-blue-600 hover:text-white transition-colors"
-                            >
-                                <Pencil size={16} />
-                            </button>
-                            <button 
-                                onClick={(e) => {
-                                    e.stopPropagation();
-                                    deleteHistoryItem(session.id);
-                                }}
-                                className="p-2 bg-slate-700 text-slate-400 rounded-lg hover:bg-red-600 hover:text-white transition-colors"
-                            >
-                                <Trash2 size={16} />
-                            </button>
-                        </div>
-                    </div>
-                ))}
-            </div>
-        )}
+        <div className="mb-6">
+            <h2 className="text-2xl font-bold text-white">{currentSession.title}</h2>
+            <p className="text-slate-400 text-sm">เริ่มเมื่อ: {new Date(currentSession.startTime || Date.now()).toLocaleTimeString('th-TH', {hour: '2-digit', minute:'2-digit'})}</p>
+        </div>
+
+        {currentSession.exercises.map(exercise => (
+          <ExerciseCard 
+            key={exercise.id} 
+            exercise={exercise}
+            onUpdateSet={updateSet}
+            onUpdateName={updateExerciseName}
+            onAddSet={addSet}
+            onRemove={removeExercise}
+          />
+        ))}
+        
+        <button className="w-full py-4 bg-slate-800 border-2 border-dashed border-slate-700 rounded-xl text-slate-400 font-medium hover:border-blue-500 hover:text-blue-500 transition-all">
+          + เพิ่มท่าออกกำลังกาย
+        </button>
       </div>
     );
   };
 
   const renderProfile = () => {
-    // Calculate BMI
-    const w = parseFloat(userProfile?.weight || '0');
-    const h = parseFloat(userProfile?.height || '0');
-    const age = parseFloat(userProfile?.age || '0');
-    const gender = userProfile?.gender || 'male';
-    const activity = userProfile?.activityLevel || 'moderate';
+     // Calculate BMI
+     const weight = parseFloat(userProfile.weight) || 0;
+     const height = parseFloat(userProfile.height) || 0;
+     const heightM = height / 100;
+     const bmi = heightM > 0 ? (weight / (heightM * heightM)).toFixed(1) : '0';
+     
+     let bmiColor = 'text-slate-400';
+     let bmiText = 'N/A';
+     const bmiNum = parseFloat(bmi);
+     if (bmiNum > 0) {
+        if (bmiNum < 18.5) { bmiColor = 'text-blue-400'; bmiText = 'ผอมเกินไป'; }
+        else if (bmiNum < 23) { bmiColor = 'text-emerald-400'; bmiText = 'สมส่วน'; }
+        else if (bmiNum < 25) { bmiColor = 'text-yellow-400'; bmiText = 'ท้วม'; }
+        else if (bmiNum < 30) { bmiColor = 'text-orange-400'; bmiText = 'อ้วน'; }
+        else { bmiColor = 'text-red-400'; bmiText = 'อ้วนมาก'; }
+     }
 
-    // BMI
-    let bmiValue = '0.0';
-    if (w > 0 && h > 0) {
-        bmiValue = (w / ((h/100) * (h/100))).toFixed(1);
-    }
-    
-    let bmiCategory = { label: '-', color: 'text-slate-500' };
-    const bmi = parseFloat(bmiValue);
-    if (bmi > 0) {
-        if (bmi < 18.5) bmiCategory = { label: 'ผอม', color: 'text-blue-400' };
-        else if (bmi < 23) bmiCategory = { label: 'สมส่วน', color: 'text-emerald-400' };
-        else if (bmi < 25) bmiCategory = { label: 'ท้วม', color: 'text-yellow-400' };
-        else if (bmi < 30) bmiCategory = { label: 'อ้วน', color: 'text-orange-400' };
-        else bmiCategory = { label: 'อ้วนมาก', color: 'text-red-400' };
-    }
+     // Calculate BMR (Mifflin-St Jeor)
+     const age = parseFloat(userProfile.age) || 0;
+     let bmr = 0;
+     if (userProfile.gender === 'male') {
+         bmr = (10 * weight) + (6.25 * height) - (5 * age) + 5;
+     } else {
+         bmr = (10 * weight) + (6.25 * height) - (5 * age) - 161;
+     }
 
-    // BMR (Mifflin-St Jeor Equation)
-    let bmr = 0;
-    if (w > 0 && h > 0 && age > 0) {
-        if (gender === 'male') {
-            bmr = (10 * w) + (6.25 * h) - (5 * age) + 5;
-        } else {
-            bmr = (10 * w) + (6.25 * h) - (5 * age) - 161;
-        }
-    }
+     // Calculate TDEE
+     const activityMultipliers: Record<string, number> = {
+         sedentary: 1.2,
+         light: 1.375,
+         moderate: 1.55,
+         active: 1.725,
+         very_active: 1.9
+     };
+     const tdee = bmr * (activityMultipliers[userProfile.activityLevel] || 1.2);
 
-    // TDEE Multipliers
-    const multipliers: { [key: string]: number } = {
-        'sedentary': 1.2,
-        'light': 1.375,
-        'moderate': 1.55,
-        'active': 1.725,
-        'very_active': 1.9
-    };
-    const tdee = bmr * (multipliers[activity] || 1.2);
+     return (
+        <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 max-w-lg mx-auto">
+        <div className="flex flex-col items-center mb-8">
+            <div className="w-24 h-24 rounded-full bg-slate-700 mb-4 overflow-hidden border-4 border-slate-600 relative group">
+                <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                <button 
+                    onClick={() => {
+                        // In a real app, this would open a modal. 
+                        // For now, we'll just cycle through avatars for demo purposes or show alert
+                        alert('สามารถเปลี่ยนรูปได้ในหน้าแก้ไขข้อมูล');
+                    }}
+                    className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                    <User size={24} className="text-white" />
+                </button>
+            </div>
+            <h2 className="text-xl font-bold text-white">{userProfile.displayName}</h2>
+            <p className="text-slate-400">@{userProfile.username}</p>
+        </div>
 
-    return (
-      <div className="p-6 pb-24 max-w-md mx-auto animate-in fade-in duration-500">
-          <h1 className="text-2xl font-bold text-white mb-6">โปรไฟล์</h1>
-          
-          <div className="bg-slate-800 rounded-3xl p-6 border border-slate-700 text-center relative overflow-hidden mb-6">
-              <div className="absolute top-0 left-0 w-full h-24 bg-gradient-to-r from-blue-600 to-purple-600 opacity-20" />
-              <div className="relative z-10">
-                  <div className="w-28 h-28 mx-auto bg-slate-900 rounded-full border-4 border-slate-700 p-1 mb-4 shadow-xl">
-                      <img src={userProfile?.avatarUrl} alt="Avatar" className="w-full h-full rounded-full object-cover" />
-                  </div>
-                  
-                  {/* Avatar Switcher Grid */}
-                  <div className="grid grid-cols-4 gap-2 mb-6">
-                        {PRESET_AVATARS.map((url, idx) => (
-                            <button 
-                                key={idx}
-                                onClick={async () => {
-                                    if (!userProfile) return;
-                                    const updated = { ...userProfile, avatarUrl: url };
-                                    setUserProfile(updated);
-                                    // Update DB
-                                    if (isSupabaseConfigured) {
-                                        await supabase.from('profiles').update({ avatar_url: url }).eq('username', userProfile.username);
-                                    }
-                                }}
-                                className={`relative w-full aspect-square rounded-full border-2 overflow-hidden transition-all ${userProfile?.avatarUrl === url ? 'border-blue-500 ring-2 ring-blue-500/50 scale-105' : 'border-slate-700 opacity-60 hover:opacity-100 hover:scale-105'}`}
-                            >
-                                <img src={url} alt="av" className="w-full h-full object-cover" />
-                                {userProfile?.avatarUrl === url && (
-                                    <div className="absolute inset-0 bg-blue-500/20 flex items-center justify-center">
-                                        <Check size={16} className="text-white drop-shadow-md" strokeWidth={3} />
-                                    </div>
-                                )}
-                            </button>
-                        ))}
-                  </div>
+        <div className="grid grid-cols-2 gap-4 mb-6">
+             <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 flex flex-col items-center">
+                 <span className="text-xs text-slate-400 mb-1">BMI</span>
+                 <span className={`text-2xl font-bold ${bmiColor}`}>{bmi}</span>
+                 <span className={`text-xs ${bmiColor} opacity-80`}>{bmiText}</span>
+             </div>
+             <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 flex flex-col items-center">
+                 <span className="text-xs text-slate-400 mb-1">BMR (เผาผลาญพื้นฐาน)</span>
+                 <span className="text-xl font-bold text-white">{Math.round(bmr)}</span>
+                 <span className="text-xs text-slate-500">kcal/day</span>
+             </div>
+             <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 flex flex-col items-center col-span-2">
+                 <span className="text-xs text-slate-400 mb-1">TDEE (ใช้พลังงานต่อวัน)</span>
+                 <span className="text-3xl font-bold text-blue-400">{Math.round(tdee)}</span>
+                 <span className="text-xs text-slate-500">kcal/day ({userProfile.activityLevel})</span>
+             </div>
+        </div>
 
-                  <h2 className="text-2xl font-bold text-white">{userProfile?.displayName}</h2>
-                  <p className="text-slate-400 text-sm">@{userProfile?.username}</p>
-              </div>
-          </div>
-
-          <div className="bg-slate-800/50 rounded-2xl p-4 border border-slate-700 mb-6">
-              <h3 className="text-white font-bold mb-4 flex items-center gap-2 text-sm">
-                  <Activity size={18} className="text-blue-400"/> ข้อมูลสุขภาพ
-              </h3>
-              
-              <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div>
-                      <label className="text-xs text-slate-400 mb-1 block">เพศ</label>
-                      <select 
-                          value={userProfile?.gender}
-                          onChange={async (e) => {
-                              if (!userProfile) return;
-                              const newGender = e.target.value as Gender;
-                              setUserProfile({...userProfile, gender: newGender});
-                              if (isSupabaseConfigured) {
-                                  await supabase.from('profiles').update({ gender: newGender }).eq('username', userProfile.username);
-                              }
-                          }}
-                          className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-lg px-2 py-2 outline-none"
-                      >
-                          <option value="male">ชาย</option>
-                          <option value="female">หญิง</option>
-                      </select>
-                  </div>
-                   <div>
-                      <label className="text-xs text-slate-400 mb-1 block">ระดับกิจกรรม</label>
-                      <select 
-                          value={userProfile?.activityLevel}
-                          onChange={async (e) => {
-                              if (!userProfile) return;
-                              const newLevel = e.target.value as ActivityLevel;
-                              setUserProfile({...userProfile, activityLevel: newLevel});
-                              if (isSupabaseConfigured) {
-                                  await supabase.from('profiles').update({ activity_level: newLevel }).eq('username', userProfile.username);
-                              }
-                          }}
-                          className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-lg px-2 py-2 outline-none"
-                      >
+        <div className="space-y-4 border-t border-slate-700 pt-6">
+            <h3 className="text-sm font-bold text-white mb-2">แก้ไขข้อมูลส่วนตัว</h3>
+            <div className="grid grid-cols-2 gap-3 mb-4">
+                <div>
+                    <label className="text-xs text-slate-400 mb-1 block">เพศ</label>
+                    <div className="w-full bg-slate-900 border border-slate-700 text-slate-300 text-sm rounded-lg px-3 py-2 opacity-80 cursor-default">
+                        {userProfile.gender === 'male' ? 'ชาย' : 'หญิง'} (แก้ไขไม่ได้)
+                    </div>
+                </div>
+                <div>
+                    <label className="text-xs text-slate-400 mb-1 block">ระดับกิจกรรม</label>
+                    <select 
+                        value={userProfile.activityLevel}
+                        onChange={async (e) => {
+                            const newLevel = e.target.value as ActivityLevel;
+                            setUserProfile({...userProfile, activityLevel: newLevel});
+                            if (isSupabaseConfigured) {
+                                await supabase.from('profiles').update({ activity_level: newLevel }).eq('username', userProfile.username);
+                            }
+                        }}
+                        className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-lg px-2 py-2 outline-none"
+                    >
                         <option value="sedentary">ไม่ออก (Sedentary)</option>
                         <option value="light">เล็กน้อย (Light)</option>
                         <option value="moderate">ปานกลาง (Moderate)</option>
                         <option value="active">หนัก (Active)</option>
                         <option value="very_active">หนักมาก (Very Active)</option>
-                      </select>
-                  </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-900 p-3 rounded-xl border border-slate-700 text-center">
-                    <p className="text-slate-400 text-[10px] mb-1">BMR (เผาผลาญพื้นฐาน)</p>
-                    <p className="text-lg font-bold text-orange-400">{Math.round(bmr)} <span className="text-xs text-slate-500 font-normal">kcal</span></p>
+                    </select>
                 </div>
-                <div className="bg-slate-900 p-3 rounded-xl border border-slate-700 text-center">
-                    <p className="text-slate-400 text-[10px] mb-1">TDEE (ใช้จริงต่อวัน)</p>
-                    <p className="text-lg font-bold text-red-400">{Math.round(tdee)} <span className="text-xs text-slate-500 font-normal">kcal</span></p>
+            </div>
+            
+            <div>
+            <label className="text-xs text-slate-400 mb-1 block">ชื่อที่แสดง</label>
+            <input 
+                type="text" 
+                value={userProfile.displayName}
+                onChange={(e) => setUserProfile({...userProfile, displayName: e.target.value})}
+                className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+            />
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3">
+                <div>
+                <label className="text-xs text-slate-400 mb-1 block">อายุ</label>
+                <input 
+                    type="number" 
+                    value={userProfile.age}
+                    onChange={(e) => setUserProfile({...userProfile, age: e.target.value})}
+                    className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                />
                 </div>
-              </div>
-          </div>
+                <div>
+                <label className="text-xs text-slate-400 mb-1 block">น้ำหนัก (kg)</label>
+                <input 
+                    type="number" 
+                    value={userProfile.weight}
+                    onChange={(e) => setUserProfile({...userProfile, weight: e.target.value})}
+                    className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                />
+                </div>
+                <div>
+                <label className="text-xs text-slate-400 mb-1 block">ส่วนสูง (cm)</label>
+                <input 
+                    type="number" 
+                    value={userProfile.height}
+                    onChange={(e) => setUserProfile({...userProfile, height: e.target.value})}
+                    className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded-lg px-3 py-2 outline-none focus:border-blue-500"
+                />
+                </div>
+            </div>
 
-          <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
-                  <p className="text-slate-400 text-xs mb-1">อายุ</p>
-                  <p className="text-xl font-bold text-white">{userProfile?.age} <span className="text-xs font-normal text-slate-500">ปี</span></p>
-              </div>
-              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
-                  <p className="text-slate-400 text-xs mb-1">ส่วนสูง</p>
-                  <p className="text-xl font-bold text-white">{userProfile?.height} <span className="text-xs font-normal text-slate-500">cm</span></p>
-              </div>
-               <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center">
-                  <p className="text-slate-400 text-xs mb-1">น้ำหนัก</p>
-                  <p className="text-xl font-bold text-white">{userProfile?.weight} <span className="text-xs font-normal text-slate-500">kg</span></p>
-              </div>
-              <div className="bg-slate-800 p-4 rounded-2xl border border-slate-700 text-center relative overflow-hidden">
-                  <p className="text-slate-400 text-xs mb-1">BMI</p>
-                  <p className={`text-xl font-bold ${bmiCategory.color}`}>{bmiValue}</p>
-                  <p className={`text-[10px] ${bmiCategory.color} opacity-80 font-medium mt-0.5`}>{bmiCategory.label}</p>
-              </div>
-          </div>
-
-          <button 
-              onClick={handleLogout}
-              className="w-full py-4 bg-slate-800 text-red-400 hover:bg-red-900/20 hover:text-red-500 rounded-xl border border-slate-700 transition-colors flex items-center justify-center gap-2"
-          >
-              <LogOut size={20} />
-              ออกจากระบบ
-          </button>
-      </div>
+            <button 
+                onClick={async () => {
+                    if (isSupabaseConfigured) {
+                        const { error } = await supabase.from('profiles').update({
+                            display_name: userProfile.displayName,
+                            age: userProfile.age,
+                            weight: userProfile.weight,
+                            height: userProfile.height,
+                            avatar_url: userProfile.avatarUrl
+                        }).eq('username', userProfile.username);
+                        
+                        if (!error) {
+                            alert('บันทึกข้อมูลสำเร็จ');
+                        }
+                    }
+                }}
+                className="w-full bg-slate-700 hover:bg-slate-600 text-white py-3 rounded-xl mt-2 transition-colors text-sm font-bold"
+            >
+                บันทึกการเปลี่ยนแปลง
+            </button>
+            
+            <button 
+                onClick={() => {
+                   setConfirmModal({
+                       isOpen: true,
+                       title: 'ออกจากระบบ',
+                       message: 'คุณต้องการออกจากระบบใช่หรือไม่?',
+                       isDangerous: true,
+                       onConfirm: () => {
+                           setIsLoggedIn(false);
+                           setAuthMode('login');
+                           setUserProfile(EMPTY_PROFILE);
+                           setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                       }
+                   });
+                }}
+                className="w-full text-red-400 hover:bg-red-900/20 py-3 rounded-xl mt-2 transition-colors text-sm"
+            >
+                ออกจากระบบ
+            </button>
+        </div>
+        </div>
     );
   };
 
-  if (!userProfile) {
-    return renderLoginScreen();
+  const renderHistory = () => (
+      <div className="space-y-4">
+          <h2 className="text-2xl font-bold text-white mb-4">ประวัติการฝึกซ้อม</h2>
+          {loadingHistory ? (
+              <div className="text-center text-slate-400 py-10">
+                  <Loader2 className="animate-spin mx-auto mb-2" />
+                  กำลังโหลดข้อมูล...
+              </div>
+          ) : history.length === 0 ? (
+              <div className="text-center text-slate-500 py-10 bg-slate-900/50 rounded-2xl border border-slate-800">
+                  <Calendar size={48} className="mx-auto mb-3 opacity-20" />
+                  <p>ยังไม่มีประวัติการฝึกซ้อม</p>
+                  <p className="text-sm mt-1">เริ่มออกกำลังกายเลย!</p>
+              </div>
+          ) : (
+              history.map(session => (
+                  <div key={session.id} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex justify-between items-center">
+                      <div>
+                          <h3 className="font-bold text-white">{session.title}</h3>
+                          <p className="text-xs text-slate-400">{new Date(session.date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' })}</p>
+                      </div>
+                      <div className="text-right">
+                          <span className="block text-xl font-bold text-blue-400">
+                             {session.exercises.length} ท่า
+                          </span>
+                      </div>
+                  </div>
+              ))
+          )}
+      </div>
+  );
+
+  // --- Main Render ---
+
+  if (!isLoggedIn) {
+      return renderAuthScreen();
   }
 
   return (
-    <div className="min-h-screen bg-slate-900 text-slate-50 font-sans selection:bg-blue-500/30">
-      
-      {activeSession && !showSummary ? renderActiveSession() :
-       showSummary ? renderSummary() :
-       viewingSession ? renderHistoryDetail() :
-       activeTab === 'workout' ? renderSelectionScreen() :
-       activeTab === 'dashboard' ? renderDashboard() :
-       renderProfile()
-      }
-
-      {/* Bottom Navigation */}
-      {!activeSession && !showSummary && !viewingSession && (
-          <div className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-t border-slate-800 p-4 pb-6 z-50">
-              <div className="flex justify-around max-w-md mx-auto">
-                  <button 
-                    onClick={() => setActiveTab('workout')}
-                    className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'workout' ? 'text-blue-500' : 'text-slate-500 hover:text-slate-300'}`}
-                  >
-                      <Dumbbell size={24} />
-                      <span className="text-[10px] font-medium">ฝึกซ้อม</span>
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('dashboard')}
-                    className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'dashboard' ? 'text-blue-500' : 'text-slate-500 hover:text-slate-300'}`}
-                  >
-                      <LayoutDashboard size={24} />
-                      <span className="text-[10px] font-medium">ภาพรวม</span>
-                  </button>
-                  <button 
-                    onClick={() => setActiveTab('profile')}
-                    className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-blue-500' : 'text-slate-500 hover:text-slate-300'}`}
-                  >
-                      <User size={24} />
-                      <span className="text-[10px] font-medium">โปรไฟล์</span>
-                  </button>
-              </div>
+    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30">
+      <header className="fixed top-0 left-0 right-0 bg-slate-900/80 backdrop-blur-md border-b border-slate-800 z-40 px-4 py-3">
+        <div className="max-w-md mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-2">
+            <div className="bg-blue-600 p-2 rounded-lg">
+                <Dumbbell className="text-white" size={20} />
+            </div>
+            <h1 className="font-bold text-lg text-white tracking-tight">REPx</h1>
           </div>
+          
+          <div className="flex items-center gap-3">
+            <button 
+                onClick={() => setIsCoachOpen(true)}
+                className="bg-gradient-to-tr from-indigo-500 to-purple-500 p-2 rounded-full text-white shadow-lg shadow-purple-900/20 hover:scale-105 transition-transform"
+            >
+                <Bot size={20} />
+            </button>
+            <button onClick={() => setView('profile')}>
+                <img src={userProfile.avatarUrl} alt="User" className="w-9 h-9 rounded-full border border-slate-600 object-cover" />
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-md mx-auto pt-24 px-4 pb-24">
+        {currentSession ? renderWorkout() : (
+            view === 'home' ? renderHome() : 
+            view === 'profile' ? renderProfile() : 
+            view === 'history' ? renderHistory() :
+            null
+        )}
+      </main>
+
+      {!currentSession && (
+          <nav className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 pb-safe z-40">
+            <div className="max-w-md mx-auto flex justify-around p-3">
+                <button 
+                    onClick={() => setView('home')}
+                    className={`flex flex-col items-center gap-1 ${view === 'home' ? 'text-blue-500' : 'text-slate-500'}`}
+                >
+                    <Dumbbell size={24} />
+                    <span className="text-[10px] font-bold">ออกกำลังกาย</span>
+                </button>
+                <button 
+                    onClick={() => setView('history')}
+                    className={`flex flex-col items-center gap-1 ${view === 'history' ? 'text-blue-500' : 'text-slate-500'}`}
+                >
+                    <Calendar size={24} />
+                    <span className="text-[10px] font-bold">ประวัติ</span>
+                </button>
+                <button 
+                    onClick={() => setView('profile')}
+                    className={`flex flex-col items-center gap-1 ${view === 'profile' ? 'text-blue-500' : 'text-slate-500'}`}
+                >
+                    <User size={24} />
+                    <span className="text-[10px] font-bold">โปรไฟล์</span>
+                </button>
+            </div>
+          </nav>
       )}
 
-      {/* Modals */}
       <AICoachModal isOpen={isCoachOpen} onClose={() => setIsCoachOpen(false)} />
       
       <ConfirmModal 
         isOpen={confirmModal.isOpen}
+        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
+        onConfirm={confirmModal.onConfirm}
         title={confirmModal.title}
         message={confirmModal.message}
-        onConfirm={confirmModal.onConfirm}
-        onClose={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
         confirmText={confirmModal.confirmText}
         cancelText={confirmModal.cancelText}
         isDangerous={confirmModal.isDangerous}

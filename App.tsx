@@ -9,7 +9,10 @@ import {
   LogIn,
   UserPlus,
   Loader2,
-  ArrowRight
+  ArrowRight,
+  Clock,
+  ChevronRight,
+  Target
 } from 'lucide-react';
 import { 
   UserProfile, 
@@ -58,9 +61,13 @@ const App: React.FC = () => {
   const [view, setView] = useState<'home' | 'profile' | 'history'>('home');
   const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
   
-  // History State for Dashboard
+  // History State
   const [history, setHistory] = useState<WorkoutSession[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  
+  // History Filter & View Detail State
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'week' | 'month' | 'year'>('all');
+  const [viewingSession, setViewingSession] = useState<WorkoutSession | null>(null);
 
   // Modals
   const [confirmModal, setConfirmModal] = useState<{
@@ -753,37 +760,183 @@ const App: React.FC = () => {
     );
   };
 
-  const renderHistory = () => (
-      <div className="space-y-4">
-          <h2 className="text-2xl font-bold text-white mb-4">ประวัติการฝึกซ้อม</h2>
+  const renderHistoryDetail = () => {
+    if (!viewingSession) return null;
+
+    const totalSets = viewingSession.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0);
+    const totalVolume = viewingSession.exercises.reduce((acc, ex) => {
+        return acc + ex.sets.filter(s => s.completed && s.weight).reduce((sAcc, s) => sAcc + (Number(s.weight) * (Number(s.reps) || 0)), 0);
+    }, 0);
+    const duration = viewingSession.endTime && viewingSession.startTime 
+        ? Math.floor((viewingSession.endTime - viewingSession.startTime) / 1000 / 60) 
+        : 0;
+
+    return (
+        <div className="space-y-4 pb-20 animate-in fade-in slide-in-from-right duration-300">
+            <button 
+                onClick={() => setViewingSession(null)}
+                className="text-slate-400 hover:text-white flex items-center gap-1 text-sm font-medium mb-4"
+            >
+                <ChevronLeft size={20} /> กลับหน้ารวม
+            </button>
+
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl p-6 relative overflow-hidden">
+                <div className={`absolute top-0 right-0 p-3 opacity-10`}>
+                    <Dumbbell size={100} />
+                </div>
+                <h2 className="text-2xl font-bold text-white mb-1">{viewingSession.title}</h2>
+                <div className="flex items-center gap-2 text-slate-400 text-sm mb-4">
+                    <Calendar size={14} />
+                    {new Date(viewingSession.date).toLocaleDateString('th-TH', { 
+                        weekday: 'long', 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric' 
+                    })}
+                </div>
+                
+                <div className="grid grid-cols-3 gap-4 border-t border-slate-700 pt-4">
+                    <div className="text-center">
+                        <div className="text-xs text-slate-500 mb-1">เวลา</div>
+                        <div className="text-lg font-bold text-white">{duration} น.</div>
+                    </div>
+                     <div className="text-center border-l border-slate-700">
+                        <div className="text-xs text-slate-500 mb-1">เซ็ตที่จบ</div>
+                        <div className="text-lg font-bold text-green-400">{totalSets}</div>
+                    </div>
+                     <div className="text-center border-l border-slate-700">
+                        <div className="text-xs text-slate-500 mb-1">นน.รวม</div>
+                        <div className="text-lg font-bold text-blue-400">{(totalVolume / 1000).toFixed(1)}k</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="space-y-3">
+                <h3 className="text-sm font-bold text-slate-400 px-1">รายละเอียดท่าฝึก</h3>
+                {viewingSession.exercises.map((ex, idx) => (
+                    <div key={idx} className="bg-slate-900/50 border border-slate-800 rounded-xl p-4">
+                        <div className="flex justify-between items-center mb-3">
+                            <h4 className="font-bold text-white">{ex.name}</h4>
+                            <span className="text-xs bg-slate-800 px-2 py-1 rounded text-slate-400">
+                                {ex.sets.filter(s => s.completed).length} เซ็ต
+                            </span>
+                        </div>
+                        <div className="space-y-2">
+                            {ex.sets.filter(s => s.completed).map((set, sIdx) => (
+                                <div key={sIdx} className="flex justify-between items-center text-sm bg-slate-800/50 p-2 rounded-lg">
+                                    <div className="flex items-center gap-3">
+                                        <span className="text-slate-500 font-mono w-6">#{set.setNumber}</span>
+                                        <span className="text-white font-bold">{set.weight || 0} <span className="text-xs font-normal text-slate-500">kg</span></span>
+                                    </div>
+                                    <div className="flex items-center gap-1">
+                                        <span className="text-slate-300">x {set.reps || 0}</span>
+                                        <span className="text-xs text-slate-500">ครั้ง</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+  };
+
+  const renderHistory = () => {
+    if (viewingSession) return renderHistoryDetail();
+
+    const filteredHistory = history.filter(session => {
+        if (historyFilter === 'all') return true;
+        const sessionDate = new Date(session.date);
+        const now = new Date();
+        if (historyFilter === 'week') {
+            const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+            return sessionDate >= oneWeekAgo;
+        }
+        if (historyFilter === 'month') {
+            const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+            return sessionDate >= oneMonthAgo;
+        }
+        if (historyFilter === 'year') {
+            const oneYearAgo = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+            return sessionDate >= oneYearAgo;
+        }
+        return true;
+    });
+
+    return (
+      <div className="space-y-4 pb-20">
+          <h2 className="text-2xl font-bold text-white">ประวัติการฝึกซ้อม</h2>
+          
+          {/* Filter Bar */}
+          <div className="flex bg-slate-800 p-1 rounded-xl overflow-x-auto no-scrollbar">
+              {[
+                  { id: 'all', label: 'ทั้งหมด' },
+                  { id: 'week', label: 'สัปดาห์นี้' },
+                  { id: 'month', label: 'เดือนนี้' },
+                  { id: 'year', label: 'ปีนี้' },
+              ].map(f => (
+                  <button
+                    key={f.id}
+                    onClick={() => setHistoryFilter(f.id as any)}
+                    className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg whitespace-nowrap transition-all ${historyFilter === f.id ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'}`}
+                  >
+                      {f.label}
+                  </button>
+              ))}
+          </div>
+
           {loadingHistory ? (
               <div className="text-center text-slate-400 py-10">
                   <Loader2 className="animate-spin mx-auto mb-2" />
                   กำลังโหลดข้อมูล...
               </div>
-          ) : history.length === 0 ? (
+          ) : filteredHistory.length === 0 ? (
               <div className="text-center text-slate-500 py-10 bg-slate-900/50 rounded-2xl border border-slate-800">
                   <Calendar size={48} className="mx-auto mb-3 opacity-20" />
-                  <p>ยังไม่มีประวัติการฝึกซ้อม</p>
-                  <p className="text-sm mt-1">เริ่มออกกำลังกายเลย!</p>
+                  <p>ไม่พบประวัติในช่วงเวลานี้</p>
+                  <p className="text-sm mt-1">เริ่มออกกำลังกายเพื่อสร้างสถิติใหม่!</p>
               </div>
           ) : (
-              history.map(session => (
-                  <div key={session.id} className="bg-slate-800 border border-slate-700 rounded-xl p-4 flex justify-between items-center">
-                      <div>
-                          <h3 className="font-bold text-white">{session.title}</h3>
-                          <p className="text-xs text-slate-400">{new Date(session.date).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' })}</p>
-                      </div>
-                      <div className="text-right">
-                          <span className="block text-xl font-bold text-blue-400">
-                             {session.exercises.length} ท่า
-                          </span>
-                      </div>
-                  </div>
-              ))
+              <div className="space-y-3">
+                {filteredHistory.map(session => {
+                   // Calculate quick stats for the card
+                   const completedSets = session.exercises.reduce((acc, ex) => acc + ex.sets.filter(s => s.completed).length, 0);
+                   const durationMin = session.endTime && session.startTime ? Math.floor((session.endTime - session.startTime) / 60000) : 0;
+                   
+                   return (
+                      <button 
+                        key={session.id} 
+                        onClick={() => setViewingSession(session)}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 flex justify-between items-center hover:bg-slate-700/50 transition-colors group text-left"
+                      >
+                          <div className="flex items-center gap-4">
+                              <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                                  session.type === 'Push' ? 'bg-orange-900/30 text-orange-500' :
+                                  session.type === 'Pull' ? 'bg-blue-900/30 text-blue-500' :
+                                  session.type === 'Legs' ? 'bg-green-900/30 text-green-500' :
+                                  'bg-purple-900/30 text-purple-500'
+                              }`}>
+                                  <Dumbbell size={20} />
+                              </div>
+                              <div>
+                                  <h3 className="font-bold text-white group-hover:text-blue-400 transition-colors">{session.title}</h3>
+                                  <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                                      <span className="flex items-center gap-1"><Calendar size={10} /> {new Date(session.date).toLocaleDateString('th-TH', { month: 'short', day: 'numeric' })}</span>
+                                      {durationMin > 0 && <span className="flex items-center gap-1"><Clock size={10} /> {durationMin} น.</span>}
+                                      <span className="flex items-center gap-1"><Target size={10} /> {completedSets} เซ็ต</span>
+                                  </div>
+                              </div>
+                          </div>
+                          <ChevronRight size={20} className="text-slate-600 group-hover:text-white transition-colors" />
+                      </button>
+                   );
+                })}
+              </div>
           )}
       </div>
-  );
+    );
+  };
 
   // --- Main Render ---
 

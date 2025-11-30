@@ -9,8 +9,7 @@ import {
   LogIn,
   UserPlus,
   Loader2,
-  ArrowRight,
-  Check
+  ArrowRight
 } from 'lucide-react';
 import { 
   UserProfile, 

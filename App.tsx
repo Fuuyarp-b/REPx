@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Dumbbell, 
   Calendar, 
@@ -12,7 +12,9 @@ import {
   ArrowRight,
   Clock,
   ChevronRight,
-  Target
+  Target,
+  Camera,
+  Upload
 } from 'lucide-react';
 import { 
   UserProfile, 
@@ -69,6 +71,9 @@ const App: React.FC = () => {
   // History Filter & View Detail State
   const [historyFilter, setHistoryFilter] = useState<'all' | 'week' | 'month' | 'year'>('all');
   const [viewingSession, setViewingSession] = useState<WorkoutSession | null>(null);
+
+  // File Upload Ref
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Modals
   const [confirmModal, setConfirmModal] = useState<{
@@ -214,6 +219,62 @@ const App: React.FC = () => {
     } finally {
         setAuthLoading(false);
     }
+  };
+
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (!event.target.files || event.target.files.length === 0) return;
+    const file = event.target.files[0];
+
+    if (!isSupabaseConfigured) {
+        setAuthError('⚠️ ต้องเชื่อมต่อ Supabase ก่อนจึงจะอัปโหลดรูปได้');
+        return;
+    }
+    
+    // Check file size (limit to 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+        setAuthError('⚠️ รูปภาพต้องมีขนาดไม่เกิน 2MB');
+        return;
+    }
+
+    setAuthLoading(true);
+    try {
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${userProfile.username || 'temp'}-${Date.now()}.${fileExt}`;
+        const filePath = `${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+            .from('avatars')
+            .upload(filePath, file);
+
+        if (uploadError) {
+            throw uploadError;
+        }
+
+        const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
+        // Add timestamp to bypass cache
+        const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+        
+        setUserProfile(prev => ({ ...prev, avatarUrl: publicUrl }));
+        
+        // If already logged in, update DB immediately
+        if (isLoggedIn && userProfile.username) {
+             await supabase.from('profiles').update({ avatar_url: publicUrl }).eq('username', userProfile.username);
+        }
+
+    } catch (error: any) {
+        console.error('Upload error:', error);
+        setAuthError('อัปโหลดรูปไม่สำเร็จ: ' + (error.message || 'Unknown error'));
+    } finally {
+        setAuthLoading(false);
+        // Clear input
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
   };
 
   const startWorkout = (type: WorkoutType, routine: Exercise[]) => {
@@ -473,13 +534,42 @@ const App: React.FC = () => {
                             </div>
 
                             <div>
-                                <label className="text-xs font-medium text-slate-400 ml-1 mb-2 block">เลือกรูปแทนตัว</label>
-                                <div className="grid grid-cols-4 gap-2">
+                                <label className="text-xs font-medium text-slate-400 ml-1 mb-2 flex justify-between items-center">
+                                    <span>รูปโปรไฟล์</span>
+                                    <button 
+                                        onClick={triggerFileInput} 
+                                        className="text-blue-400 flex items-center gap-1 hover:text-blue-300 transition-colors"
+                                    >
+                                        <Upload size={14} /> อัปโหลดรูปเอง
+                                    </button>
+                                </label>
+                                <input 
+                                    type="file" 
+                                    ref={fileInputRef}
+                                    onChange={handleAvatarUpload}
+                                    className="hidden" 
+                                    accept="image/*"
+                                />
+                                
+                                {/* Selected/Current Avatar Preview */}
+                                <div className="flex justify-center mb-4">
+                                    <div className="relative w-24 h-24 rounded-full border-4 border-blue-500 overflow-hidden shadow-lg shadow-blue-500/20 bg-slate-800">
+                                        <img src={userProfile.avatarUrl} alt="Selected" className="w-full h-full object-cover" />
+                                        <button 
+                                            onClick={triggerFileInput}
+                                            className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                                        >
+                                            <Camera size={24} className="text-white" />
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-5 gap-2">
                                     {PRESET_AVATARS.map((url, index) => (
                                         <button
                                             key={index}
                                             onClick={() => setUserProfile({...userProfile, avatarUrl: url})}
-                                            className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${userProfile.avatarUrl === url ? 'border-blue-500 scale-105 shadow-lg shadow-blue-500/20' : 'border-slate-700 opacity-60 hover:opacity-100'}`}
+                                            className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${userProfile.avatarUrl === url ? 'border-blue-500 scale-105 shadow-md shadow-blue-500/20 ring-2 ring-blue-500/30' : 'border-slate-800 opacity-60 hover:opacity-100 hover:border-slate-600'}`}
                                         >
                                             <img src={url} alt={`Avatar ${index}`} className="w-full h-full object-cover" />
                                         </button>
@@ -649,16 +739,21 @@ const App: React.FC = () => {
             <div className="w-24 h-24 rounded-full bg-slate-700 mb-4 overflow-hidden border-4 border-slate-600 relative group">
                 <img src={userProfile.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
                 <button 
-                    onClick={() => {
-                        // In a real app, this would open a modal. 
-                        // For now, we'll just cycle through avatars for demo purposes or show alert
-                        alert('สามารถเปลี่ยนรูปได้ในหน้าแก้ไขข้อมูล');
-                    }}
+                    onClick={triggerFileInput}
                     className="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                    <User size={24} className="text-white" />
+                    <Camera size={24} className="text-white" />
                 </button>
             </div>
+            {/* Hidden Input for Profile Screen */}
+            <input 
+                type="file" 
+                ref={fileInputRef}
+                onChange={handleAvatarUpload}
+                className="hidden" 
+                accept="image/*"
+            />
+            
             <h2 className="text-xl font-bold text-white">{userProfile.displayName}</h2>
             <p className="text-slate-400">@{userProfile.username}</p>
         </div>

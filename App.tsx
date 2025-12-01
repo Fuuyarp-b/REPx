@@ -28,7 +28,8 @@ import {
   PULL_ROUTINE, 
   LEGS_ROUTINE, 
   MOTIVATIONAL_QUOTES,
-  PRESET_AVATARS
+  PRESET_AVATARS,
+  createSets
 } from './constants';
 import { supabase, isSupabaseConfigured } from './lib/supabaseClient';
 import { AICoachModal } from './components/AICoachModal';
@@ -216,13 +217,29 @@ const App: React.FC = () => {
   };
 
   const startWorkout = (type: WorkoutType, routine: Exercise[]) => {
+    let initialExercises: Exercise[] = [];
+
+    if (type === 'Custom') {
+        // Initialize Custom workout with one default exercise
+        initialExercises = [{
+            id: crypto.randomUUID(),
+            name: 'ท่าออกกำลังกายใหม่ (แตะเพื่อแก้ไข)',
+            muscleGroup: 'Chest', // Default fallback
+            targetSets: 3,
+            targetReps: '10',
+            sets: createSets(3)
+        }];
+    } else {
+        initialExercises = JSON.parse(JSON.stringify(routine));
+    }
+
     const newSession: WorkoutSession = {
       id: crypto.randomUUID(),
       type,
-      title: `${type} Workout`,
+      title: type === 'Custom' ? 'Custom Workout' : `${type} Workout`,
       date: new Date().toISOString(),
       startTime: Date.now(),
-      exercises: JSON.parse(JSON.stringify(routine)),
+      exercises: initialExercises,
       status: 'active'
     };
     setCurrentSession(newSession);
@@ -309,6 +326,22 @@ const App: React.FC = () => {
       return ex;
     });
     setCurrentSession({ ...currentSession, exercises: updatedExercises });
+  };
+
+  const addNewExercise = () => {
+      if (!currentSession) return;
+      const newExercise: Exercise = {
+          id: crypto.randomUUID(),
+          name: 'ท่าออกกำลังกายใหม่',
+          muscleGroup: 'Chest',
+          targetSets: 3,
+          targetReps: '10',
+          sets: createSets(3)
+      };
+      setCurrentSession({
+          ...currentSession,
+          exercises: [...currentSession.exercises, newExercise]
+      });
   };
 
   const removeExercise = (exerciseId: string) => {
@@ -502,21 +535,22 @@ const App: React.FC = () => {
           <Play size={20} className="text-blue-500" />
           เริ่มออกกำลังกาย
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           {[
             { id: 'push', name: 'Push Day', routine: PUSH_ROUTINE, color: 'from-orange-500 to-red-500' },
             { id: 'pull', name: 'Pull Day', routine: PULL_ROUTINE, color: 'from-blue-500 to-cyan-500' },
             { id: 'legs', name: 'Leg Day', routine: LEGS_ROUTINE, color: 'from-emerald-500 to-green-500' },
+            { id: 'custom', name: 'Custom', routine: [], color: 'from-purple-500 to-indigo-500' },
           ].map((item) => (
             <button
               key={item.id}
               onClick={() => startWorkout(item.name as WorkoutType, item.routine)}
-              className="relative group overflow-hidden rounded-xl h-32 text-left transition-all hover:scale-[1.02]"
+              className="relative group overflow-hidden rounded-xl h-28 text-left transition-all hover:scale-[1.02]"
             >
               <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-90 group-hover:opacity-100 transition-opacity`} />
-              <div className="absolute inset-0 p-5 flex flex-col justify-between z-10">
-                <span className="text-2xl font-bold text-white">{item.name}</span>
-                <span className="text-white/80 text-sm flex items-center gap-1">
+              <div className="absolute inset-0 p-4 flex flex-col justify-between z-10">
+                <span className="text-xl font-bold text-white">{item.name}</span>
+                <span className="text-white/80 text-xs flex items-center gap-1">
                   เริ่มเลย <ChevronLeft className="rotate-180" size={14} />
                 </span>
               </div>
@@ -562,7 +596,10 @@ const App: React.FC = () => {
           />
         ))}
         
-        <button className="w-full py-4 bg-slate-800 border-2 border-dashed border-slate-700 rounded-xl text-slate-400 font-medium hover:border-blue-500 hover:text-blue-500 transition-all">
+        <button 
+          onClick={addNewExercise}
+          className="w-full py-4 bg-slate-800 border-2 border-dashed border-slate-700 rounded-xl text-slate-400 font-medium hover:border-blue-500 hover:text-blue-500 transition-all"
+        >
           + เพิ่มท่าออกกำลังกาย
         </button>
       </div>

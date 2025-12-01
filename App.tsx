@@ -17,8 +17,7 @@ import {
   Camera,
   Upload,
   Trash2,
-  Plus,
-  X
+  Plus
 } from 'lucide-react';
 import { 
   UserProfile, 
@@ -473,18 +472,6 @@ const App: React.FC = () => {
 
   // --- Helper Functions for Rendering ---
   
-  const calculateTotalVolume = (exercises: Exercise[]) => {
-    return exercises.reduce((acc, ex) => {
-      const exVol = ex.sets.reduce((setAcc, s) => {
-        if (s.completed && typeof s.weight === 'number' && typeof s.reps === 'number') {
-          return setAcc + (s.weight * s.reps);
-        }
-        return setAcc;
-      }, 0);
-      return acc + exVol;
-    }, 0);
-  };
-
   const formatDuration = (start?: number, end?: number) => {
     if (!start || !end) return '0 นาที';
     const diff = end - start;

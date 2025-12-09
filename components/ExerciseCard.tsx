@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Pencil, Check, X, Plus, Trash2, History } from 'lucide-react';
+import { Pencil, Check, X, Plus, Trash2, History, Minus } from 'lucide-react';
 import { Exercise, WorkoutSet } from '../types';
 
 interface ExerciseCardProps {
@@ -9,6 +9,7 @@ interface ExerciseCardProps {
   onAddSet: (exerciseId: string) => void;
   onRemove: (exerciseId: string) => void;
   lastWeight?: number | null; // New prop for last session weight
+  onUpdateSets?: (exerciseId: string, sets: WorkoutSet[]) => void;
 }
 
 export const ExerciseCard: React.FC<ExerciseCardProps> = ({ 
@@ -17,7 +18,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
   onUpdateName, 
   onAddSet, 
   onRemove,
-  lastWeight 
+  lastWeight,
+  onUpdateSets
 }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(exercise.name);
@@ -34,8 +36,27 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
     onUpdateSet(exercise.id, { ...set, [field]: numValue });
   };
 
+  const adjustReps = (set: WorkoutSet, delta: number) => {
+    const currentReps = typeof set.reps === 'number' ? set.reps : 0;
+    const newReps = Math.max(0, currentReps + delta);
+    onUpdateSet(exercise.id, { ...set, reps: newReps });
+  };
+
   const toggleComplete = (set: WorkoutSet) => {
     onUpdateSet(exercise.id, { ...set, completed: !set.completed });
+  };
+
+  const applyQuickReps = (value: number) => {
+      // Logic: Update all sets that are NOT completed with the selected value
+      if (onUpdateSets) {
+          const updatedSets = exercise.sets.map(s => {
+              if (!s.completed) {
+                  return { ...s, reps: value };
+              }
+              return s;
+          });
+          onUpdateSets(exercise.id, updatedSets);
+      }
   };
 
   const saveName = () => {
@@ -108,15 +129,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
 
       <div className="space-y-3">
         {/* Header Row */}
-        <div className="grid grid-cols-10 gap-3 text-[10px] text-slate-500 uppercase font-bold tracking-widest px-2 mb-1">
+        <div className="grid grid-cols-12 gap-2 text-[10px] text-slate-500 uppercase font-bold tracking-widest px-1 mb-1">
             <div className="col-span-1 text-center self-end">#</div>
             <div className="col-span-3 text-center self-end">KG</div>
-            <div className="col-span-3 text-center self-end">REPS</div>
-            <div className="col-span-3 text-center self-end">DONE</div>
+            <div className="col-span-6 text-center self-end">REPS</div>
+            <div className="col-span-2 text-center self-end">DONE</div>
         </div>
         
         {exercise.sets.map((set, index) => (
-          <div key={set.id} className={`grid grid-cols-10 gap-3 items-center p-1 rounded-2xl transition-all duration-300 ${set.completed ? 'opacity-50' : ''}`}>
+          <div key={set.id} className={`grid grid-cols-12 gap-2 items-center p-1 rounded-2xl transition-all duration-300 ${set.completed ? 'opacity-50' : ''}`}>
             
             {/* Set Number */}
             <div className="col-span-1 flex justify-center">
@@ -136,19 +157,35 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 />
             </div>
 
-            {/* Reps Input */}
-            <div className="col-span-3 relative">
-                <input 
-                    type="number" 
-                    placeholder="-"
-                    value={set.reps}
-                    onChange={(e) => handleSetChange(set, 'reps', e.target.value)}
-                    className={`w-full h-12 bg-black/30 text-center text-white text-lg font-semibold rounded-2xl border border-transparent focus:border-blue-500/50 focus:bg-black/50 focus:outline-none transition-all placeholder:text-slate-700`}
-                />
+            {/* Reps Input with Large +/- Buttons */}
+            <div className="col-span-6 flex items-center gap-1.5 h-12">
+                <button 
+                    onClick={() => adjustReps(set, -1)}
+                    className="h-full w-10 flex items-center justify-center bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 rounded-xl border border-rose-500/20 active:scale-90 transition-all shadow-sm"
+                >
+                    <Minus size={20} strokeWidth={2.5} />
+                </button>
+                
+                <div className="flex-1 h-full bg-black/30 rounded-xl border border-transparent focus-within:border-blue-500/30 flex items-center justify-center relative">
+                    <input 
+                        type="number" 
+                        placeholder="-"
+                        value={set.reps}
+                        onChange={(e) => handleSetChange(set, 'reps', e.target.value)}
+                        className="w-full h-full bg-transparent text-center text-white text-xl font-bold focus:outline-none placeholder:text-slate-700 z-10"
+                    />
+                </div>
+                
+                <button 
+                    onClick={() => adjustReps(set, 1)}
+                    className="h-full w-10 flex items-center justify-center bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-500 rounded-xl border border-emerald-500/20 active:scale-90 transition-all shadow-sm"
+                >
+                    <Plus size={20} strokeWidth={2.5} />
+                </button>
             </div>
 
             {/* Complete Button */}
-            <div className="col-span-3 h-12">
+            <div className="col-span-2 h-12">
                 <button 
                     onClick={() => toggleComplete(set)}
                     className={`w-full h-full rounded-2xl flex items-center justify-center transition-all active:scale-95 shadow-lg ${
@@ -164,12 +201,29 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
         ))}
       </div>
 
-      <button 
-        onClick={() => onAddSet(exercise.id)}
-        className="w-full py-3 mt-5 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-blue-400 bg-white/5 hover:bg-white/10 rounded-2xl transition-all flex items-center justify-center gap-2 border border-white/5"
-      >
-        <Plus size={14} /> Add Set
-      </button>
+      {/* Quick Select Reps & Add Set */}
+      <div className="mt-4 flex flex-col gap-3">
+          {/* Quick Reps */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-wider shrink-0 mr-1">Quick Reps:</span>
+              {[8, 10, 12, 15, 20].map(val => (
+                  <button
+                    key={val}
+                    onClick={() => applyQuickReps(val)}
+                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-400 text-xs font-bold border border-white/5 transition-all shadow-sm active:scale-95"
+                  >
+                      {val}
+                  </button>
+              ))}
+          </div>
+
+          <button 
+            onClick={() => onAddSet(exercise.id)}
+            className="w-full py-3 text-xs font-bold uppercase tracking-wider text-slate-500 hover:text-blue-400 bg-white/5 hover:bg-white/10 rounded-2xl transition-all flex items-center justify-center gap-2 border border-white/5"
+          >
+            <Plus size={14} /> Add Set
+          </button>
+      </div>
     </div>
   );
 };

@@ -396,6 +396,14 @@ const App: React.FC = () => {
     setCurrentSession({ ...currentSession, exercises: updatedExercises });
   };
 
+  const updateExerciseSets = (exerciseId: string, newSets: WorkoutSet[]) => {
+    if (!currentSession) return;
+    const updatedExercises = currentSession.exercises.map(ex => 
+        ex.id === exerciseId ? { ...ex, sets: newSets } : ex
+    );
+    setCurrentSession({ ...currentSession, exercises: updatedExercises });
+  };
+
   const updateExerciseName = (exerciseId: string, newName: string) => {
     if (!currentSession) return;
     const updatedExercises = currentSession.exercises.map(ex => 
@@ -918,6 +926,7 @@ const App: React.FC = () => {
               onAddSet={addSet}
               onRemove={removeExercise}
               lastWeight={getLastWeight(exercise.name)}
+              onUpdateSets={updateExerciseSets}
             />
           ))}
         </div>

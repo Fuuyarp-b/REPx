@@ -948,14 +948,22 @@ const App: React.FC = () => {
 
       return (
           <div className="space-y-6 pb-24 animate-in fade-in slide-in-from-right-8 duration-300">
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                      <button 
+                        onClick={() => setViewingSession(null)}
+                        className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 backdrop-blur-md transition-colors"
+                      >
+                          <ChevronLeft size={20} />
+                      </button>
+                      <h2 className="text-xl font-bold text-white tracking-tight">รายละเอียดการฝึก</h2>
+                  </div>
                   <button 
-                    onClick={() => setViewingSession(null)}
-                    className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 backdrop-blur-md"
+                      onClick={() => handleDeleteHistory(viewingSession.id)}
+                      className="w-10 h-10 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-xl flex items-center justify-center transition-colors border border-red-500/20"
                   >
-                      <ChevronLeft size={20} />
+                      <Trash2 size={20} />
                   </button>
-                  <h2 className="text-xl font-bold text-white tracking-tight">รายละเอียดการฝึก</h2>
               </div>
 
               <div className={`bg-gradient-to-br from-${themeColor}-900/50 to-slate-900 rounded-[2rem] p-6 border border-${themeColor}-500/30 shadow-xl overflow-hidden relative`}>
@@ -1122,52 +1130,39 @@ const App: React.FC = () => {
               <p className="text-slate-500 font-medium">ไม่พบประวัติการฝึกซ้อม</p>
             </div>
           ) : (
-            filteredHistory.map((session) => {
-              const themeColor = session.type === 'Push' ? 'orange' : session.type === 'Pull' ? 'blue' : session.type === 'Legs' ? 'emerald' : 'purple';
-              const gradient = session.type === 'Push' ? 'from-orange-500 to-red-500' : session.type === 'Pull' ? 'from-cyan-500 to-blue-500' : session.type === 'Legs' ? 'from-emerald-500 to-green-500' : 'from-purple-500 to-fuchsia-500';
-              
-              return (
-              <div 
-                key={session.id} 
-                className="group relative bg-slate-900/60 backdrop-blur-md hover:bg-slate-800/80 rounded-2xl border border-white/5 hover:border-white/20 transition-all cursor-pointer overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1"
-                onClick={() => setViewingSession(session)}
-              >
-                  {/* Left Color Bar */}
-                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${gradient}`}></div>
+            <div className="grid grid-cols-4 gap-4 sm:gap-6 justify-items-center">
+               {filteredHistory.map((session) => {
+                  const date = new Date(session.date);
+                  const day = date.getDate();
+                  const month = date.toLocaleDateString('th-TH', { month: 'short' });
+                  
+                  const gradient = 
+                    session.type === 'Push' ? 'from-orange-500 to-red-600' : 
+                    session.type === 'Pull' ? 'from-cyan-500 to-blue-600' : 
+                    session.type === 'Legs' ? 'from-emerald-500 to-green-600' : 
+                    'from-purple-500 to-fuchsia-600';
+                  
+                  const shadowColor = 
+                    session.type === 'Push' ? 'shadow-orange-500/40' : 
+                    session.type === 'Pull' ? 'shadow-blue-500/40' : 
+                    session.type === 'Legs' ? 'shadow-emerald-500/40' : 
+                    'shadow-purple-500/40';
 
-                  <div className="p-4 pl-6">
-                      <div className="flex justify-between items-start mb-2">
-                          <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="font-semibold text-white text-base tracking-tight">{session.title}</h4>
-                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-${themeColor}-500/10 text-${themeColor}-400 border border-${themeColor}-500/20`}>
-                                      {session.type}
-                                  </span>
-                              </div>
-                              <p className="text-xs text-slate-500 font-medium flex items-center gap-2">
-                                 <Calendar size={12} />
-                                 {new Date(session.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
-                              </p>
-                          </div>
-                          
-                          <div className="text-right">
-                              <p className="text-white font-bold text-sm tracking-tight">{formatDuration(session.startTime, session.endTime)}</p>
-                          </div>
-                      </div>
-
-                      {/* Delete Button (Visible on Hover/Touch) */}
-                      <button 
-                          onClick={(e) => {
-                              e.stopPropagation();
-                              handleDeleteHistory(session.id);
-                          }}
-                          className="absolute bottom-4 right-4 p-2 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
-                      >
-                          <Trash2 size={16} />
-                      </button>
-                  </div>
-              </div>
-            )})
+                  return (
+                    <button 
+                        key={session.id}
+                        onClick={() => setViewingSession(session)}
+                        className="group flex flex-col items-center gap-2"
+                    >
+                        <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${gradient} flex flex-col items-center justify-center shadow-lg ${shadowColor} group-hover:scale-110 transition-transform duration-300 relative border-2 border-white/10`}>
+                            <span className="text-2xl font-bold text-white leading-none drop-shadow-md">{day}</span>
+                            <span className="text-[8px] font-bold text-white/90 uppercase tracking-widest mt-0.5">{session.type}</span>
+                        </div>
+                        <span className="text-xs font-medium text-slate-500 group-hover:text-slate-300 transition-colors">{month}</span>
+                    </button>
+                  );
+               })}
+            </div>
           )}
         </div>
       </div>

@@ -24,7 +24,8 @@ import {
   Crown,
   Lock,
   Check,
-  Award
+  Award,
+  List
 } from 'lucide-react';
 import { 
   UserProfile, 
@@ -500,7 +501,6 @@ const App: React.FC = () => {
   const calculateStreak = () => {
       if (history.length === 0) return 0;
       
-      // Sort history by date desc (just in case)
       const sortedHistory = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       
       const today = new Date();
@@ -509,14 +509,12 @@ const App: React.FC = () => {
       let currentStreak = 0;
       let lastDate = today;
 
-      // Check if worked out today
       const lastWorkoutDate = new Date(sortedHistory[0].date);
       lastWorkoutDate.setHours(0, 0, 0, 0);
       
       if (lastWorkoutDate.getTime() === today.getTime()) {
           currentStreak = 1;
       } else {
-          // If not today, check if yesterday. If not yesterday, streak is 0.
           const yesterday = new Date(today);
           yesterday.setDate(yesterday.getDate() - 1);
           if (lastWorkoutDate.getTime() === yesterday.getTime()) {
@@ -527,7 +525,6 @@ const App: React.FC = () => {
           }
       }
 
-      // Iterate backwards
       for (let i = (currentStreak === 1 && lastWorkoutDate.getTime() === today.getTime() ? 1 : 0); i < sortedHistory.length; i++) {
           const sessionDate = new Date(sortedHistory[i].date);
           sessionDate.setHours(0, 0, 0, 0);
@@ -535,7 +532,7 @@ const App: React.FC = () => {
           const diffTime = Math.abs(lastDate.getTime() - sessionDate.getTime());
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-          if (diffDays === 0) continue; // Same day workout, ignore
+          if (diffDays === 0) continue; 
           if (diffDays === 1) {
               currentStreak++;
               lastDate = sessionDate;
@@ -1049,7 +1046,7 @@ const App: React.FC = () => {
             </div>
         </div>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <h3 className="text-lg font-bold text-white mb-2">ประวัติล่าสุด</h3>
           {loadingHistory ? (
               <div className="flex justify-center py-8"><Loader2 className="animate-spin text-blue-500" /></div>
@@ -1058,64 +1055,54 @@ const App: React.FC = () => {
               <p className="text-slate-500">ไม่พบประวัติการฝึกซ้อมในช่วงนี้</p>
             </div>
           ) : (
-            filteredHistory.map((session) => (
+            filteredHistory.map((session) => {
+              const activeExerciseCount = session.exercises.filter(ex => ex.sets.some(s => s.completed)).length;
+              const themeColor = session.type === 'Push' ? 'orange' : session.type === 'Pull' ? 'blue' : session.type === 'Legs' ? 'emerald' : 'purple';
+              
+              return (
               <div 
                 key={session.id} 
-                className="bg-slate-800 p-4 rounded-2xl border border-slate-700 shadow-sm hover:border-slate-500 transition-colors flex flex-col gap-3"
+                className="group relative bg-slate-800/80 hover:bg-slate-800 p-3 rounded-2xl border border-slate-700/50 hover:border-blue-500/30 transition-all cursor-pointer"
+                onClick={() => setViewingSession(session)}
               >
-                  <div className="flex justify-between items-start">
-                     <button onClick={() => setViewingSession(session)} className="flex-1 text-left">
-                        <div className="flex justify-between items-start mb-1">
-                            <div>
-                                <h4 className="font-bold text-white text-lg">{session.title}</h4>
-                                <div className="flex items-center gap-2 text-slate-400 text-sm">
-                                    <Calendar size={14} />
-                                    {new Date(session.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
-                                </div>
-                            </div>
-                            <div className={`px-2 py-1 rounded text-xs font-bold border ${
-                                session.type === 'Push' ? 'bg-orange-900/20 text-orange-400 border-orange-500/20' :
-                                session.type === 'Pull' ? 'bg-blue-900/20 text-blue-400 border-blue-500/20' :
-                                session.type === 'Legs' ? 'bg-emerald-900/20 text-emerald-400 border-emerald-500/20' :
-                                'bg-purple-900/20 text-purple-400 border-purple-500/20'
-                            }`}>
-                                {session.type}
-                            </div>
+                  <div className="flex justify-between items-center">
+                     <div className="flex items-center gap-3">
+                         {/* Icon Box */}
+                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-${themeColor}-500/20 to-slate-800 text-${themeColor}-400 border border-${themeColor}-500/20`}>
+                             <Dumbbell size={18} />
+                         </div>
+                         
+                         <div>
+                             <h4 className="font-bold text-white text-sm">{session.title}</h4>
+                             <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                                 {new Date(session.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
+                             </p>
+                         </div>
+                     </div>
+
+                     <div className="flex flex-col items-end gap-1">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border bg-${themeColor}-500/10 text-${themeColor}-400 border-${themeColor}-500/20`}>
+                            {session.type}
+                        </span>
+                        <div className="flex items-center gap-3 text-xs text-slate-500">
+                             <span className="flex items-center gap-1"><Clock size={10} /> {formatDuration(session.startTime, session.endTime)}</span>
+                             <span className="flex items-center gap-1"><List size={10} /> {activeExerciseCount} ท่า</span>
                         </div>
-                    </button>
-                    <button 
-                        onClick={() => handleDeleteHistory(session.id)}
-                        className="ml-2 p-2 text-slate-600 hover:text-red-500 transition-colors"
-                        title="ลบรายการนี้"
-                    >
-                        <Trash2 size={18} />
-                    </button>
+                     </div>
                   </div>
 
-                  {/* Exercise Summary List */}
-                  <button onClick={() => setViewingSession(session)} className="text-left w-full">
-                     <div className="bg-slate-900/50 rounded-xl p-3 border border-slate-800">
-                        <p className="text-xs text-slate-500 uppercase font-bold mb-2">ท่าที่เล่น</p>
-                        <div className="flex flex-wrap gap-2">
-                             {/* Show only exercises that had at least one completed set */}
-                             {session.exercises.filter(ex => ex.sets.some(s => s.completed)).length > 0 ? (
-                                 session.exercises.filter(ex => ex.sets.some(s => s.completed)).map((ex, idx) => (
-                                    <span key={idx} className="text-xs text-slate-300 bg-slate-800 px-2 py-1 rounded border border-slate-700">
-                                        {ex.name}
-                                    </span>
-                                 ))
-                             ) : (
-                                 <span className="text-xs text-slate-500 italic">ไม่ได้บันทึกท่าที่เล่นจบ</span>
-                             )}
-                        </div>
-                     </div>
-                     <div className="flex justify-between items-center mt-3 text-xs font-medium text-slate-400 group">
-                         <span>เวลา: {formatDuration(session.startTime, session.endTime)}</span>
-                         <span className="flex items-center gap-1 group-hover:text-blue-400 transition-colors">ดูรายละเอียด <ChevronRight size={14} /></span>
-                     </div>
+                  {/* Delete Button (Visible on Hover/Touch) */}
+                  <button 
+                      onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteHistory(session.id);
+                      }}
+                      className="absolute top-2 right-2 p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                  >
+                      <Trash2 size={14} />
                   </button>
               </div>
-            ))
+            )})
           )}
         </div>
       </div>

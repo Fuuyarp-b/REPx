@@ -22,7 +22,6 @@ import {
   Flame,
   Star,
   Crown,
-  Zap,
   Lock,
   Check,
   Award
@@ -1134,8 +1133,8 @@ const App: React.FC = () => {
             icon: 'flame',
             color: 'text-orange-500',
             targetLabel: '3 วัน',
-            condition: (h, s) => s >= 3,
-            progress: (h, s) => Math.min((s/3)*100, 100)
+            condition: (_h, s) => s >= 3,
+            progress: (_h, s) => Math.min((s/3)*100, 100)
         },
         {
             id: 'streak-7',
@@ -1144,8 +1143,8 @@ const App: React.FC = () => {
             icon: 'flame',
             color: 'text-blue-400',
             targetLabel: '7 วัน',
-            condition: (h, s) => s >= 7,
-            progress: (h, s) => Math.min((s/7)*100, 100)
+            condition: (_h, s) => s >= 7,
+            progress: (_h, s) => Math.min((s/7)*100, 100)
         },
         {
             id: 'streak-30',
@@ -1154,8 +1153,8 @@ const App: React.FC = () => {
             icon: 'crown',
             color: 'text-yellow-400',
             targetLabel: '30 วัน',
-            condition: (h, s) => s >= 30,
-            progress: (h, s) => Math.min((s/30)*100, 100)
+            condition: (_h, s) => s >= 30,
+            progress: (_h, s) => Math.min((s/30)*100, 100)
         },
         {
             id: 'rookie',

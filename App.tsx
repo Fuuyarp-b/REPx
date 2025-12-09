@@ -1240,10 +1240,15 @@ const App: React.FC = () => {
       return renderAuthScreen();
   }
 
+  // Header Logic
+  // Show header if we are NOT in active workout view.
+  // Active workout view happens when view === 'home' AND currentSession is not null.
+  const isWorkoutActiveView = view === 'home' && currentSession !== null;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans pb-20 max-w-md mx-auto shadow-2xl overflow-hidden relative selection:bg-blue-500/30">
       {/* Header */}
-      {!currentSession && (
+      {!isWorkoutActiveView && (
           <header className="p-6 pb-2 flex justify-between items-center bg-slate-950 sticky top-0 z-40">
             <div>
               <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 tracking-tighter">
@@ -1261,45 +1266,42 @@ const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="p-6 pt-4">
-        {currentSession ? (
-            renderWorkout()
-        ) : view === 'history' ? (
+        {view === 'history' ? (
             viewingSession ? renderHistoryDetail() : renderHistory()
         ) : view === 'profile' ? (
             renderProfile()
         ) : (
-            renderHome()
+            // view === 'home'
+            currentSession ? renderWorkout() : renderHome()
         )}
       </main>
 
-      {/* Bottom Navigation */}
-      {!currentSession && (
-        <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-lg border-t border-slate-800 p-2 z-50 max-w-md mx-auto">
-          <div className="flex justify-around items-center">
-            <button
-              onClick={() => { setView('home'); setViewingSession(null); }}
-              className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${view === 'home' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              <Dumbbell size={24} />
-              <span className="text-[10px] font-bold">ฝึกซ้อม</span>
-            </button>
-            <button
-              onClick={() => { setView('history'); setViewingSession(null); }}
-              className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${view === 'history' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              <Calendar size={24} />
-              <span className="text-[10px] font-bold">ประวัติ</span>
-            </button>
-            <button
-              onClick={() => { setView('profile'); setViewingSession(null); }}
-              className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${view === 'profile' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
-            >
-              <User size={24} />
-              <span className="text-[10px] font-bold">โปรไฟล์</span>
-            </button>
-          </div>
-        </nav>
-      )}
+      {/* Bottom Navigation - Always Visible */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-lg border-t border-slate-800 p-2 z-50 max-w-md mx-auto">
+        <div className="flex justify-around items-center">
+          <button
+            onClick={() => { setView('home'); setViewingSession(null); }}
+            className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${view === 'home' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            <Dumbbell size={24} />
+            <span className="text-[10px] font-bold">{currentSession ? 'กำลังฝึก' : 'ฝึกซ้อม'}</span>
+          </button>
+          <button
+            onClick={() => { setView('history'); setViewingSession(null); }}
+            className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${view === 'history' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            <Calendar size={24} />
+            <span className="text-[10px] font-bold">ประวัติ</span>
+          </button>
+          <button
+            onClick={() => { setView('profile'); setViewingSession(null); }}
+            className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${view === 'profile' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            <User size={24} />
+            <span className="text-[10px] font-bold">โปรไฟล์</span>
+          </button>
+        </div>
+      </nav>
 
       {/* Modals */}
       <AICoachModal isOpen={isCoachOpen} onClose={() => setIsCoachOpen(false)} />

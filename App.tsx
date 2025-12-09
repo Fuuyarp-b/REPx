@@ -16,7 +16,16 @@ import {
   Camera,
   Upload,
   Trash2,
-  Plus
+  Plus,
+  Trophy,
+  Medal,
+  Flame,
+  Star,
+  Crown,
+  Zap,
+  Lock,
+  Check,
+  Award
 } from 'lucide-react';
 import { 
   UserProfile, 
@@ -25,7 +34,8 @@ import {
   Exercise,
   WorkoutSet,
   WorkoutType,
-  Gender
+  Gender,
+  Achievement
 } from './types';
 import { 
   PUSH_ROUTINE, 
@@ -63,7 +73,7 @@ const App: React.FC = () => {
   const [userProfile, setUserProfile] = useState<UserProfile>(EMPTY_PROFILE);
   const [currentSession, setCurrentSession] = useState<WorkoutSession | null>(null);
   const [isCoachOpen, setIsCoachOpen] = useState(false);
-  const [view, setView] = useState<'home' | 'profile' | 'history'>('home');
+  const [view, setView] = useState<'home' | 'profile' | 'history' | 'challenges'>('home');
   const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
   
   // History State
@@ -485,6 +495,56 @@ const App: React.FC = () => {
               }
           }
       });
+  };
+
+  // --- Logic for Streak and Achievements ---
+  const calculateStreak = () => {
+      if (history.length === 0) return 0;
+      
+      // Sort history by date desc (just in case)
+      const sortedHistory = [...history].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
+      let currentStreak = 0;
+      let lastDate = today;
+
+      // Check if worked out today
+      const lastWorkoutDate = new Date(sortedHistory[0].date);
+      lastWorkoutDate.setHours(0, 0, 0, 0);
+      
+      if (lastWorkoutDate.getTime() === today.getTime()) {
+          currentStreak = 1;
+      } else {
+          // If not today, check if yesterday. If not yesterday, streak is 0.
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          if (lastWorkoutDate.getTime() === yesterday.getTime()) {
+              currentStreak = 1;
+              lastDate = yesterday;
+          } else {
+              return 0; 
+          }
+      }
+
+      // Iterate backwards
+      for (let i = (currentStreak === 1 && lastWorkoutDate.getTime() === today.getTime() ? 1 : 0); i < sortedHistory.length; i++) {
+          const sessionDate = new Date(sortedHistory[i].date);
+          sessionDate.setHours(0, 0, 0, 0);
+
+          const diffTime = Math.abs(lastDate.getTime() - sessionDate.getTime());
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+          if (diffDays === 0) continue; // Same day workout, ignore
+          if (diffDays === 1) {
+              currentStreak++;
+              lastDate = sessionDate;
+          } else {
+              break;
+          }
+      }
+      return currentStreak;
   };
 
   // --- Helper Functions for Rendering ---
@@ -1063,6 +1123,157 @@ const App: React.FC = () => {
     );
   };
 
+  const renderChallenges = () => {
+    const streak = calculateStreak();
+    
+    const achievements: Achievement[] = [
+        {
+            id: 'streak-3',
+            title: 'จุดเริ่มต้น',
+            description: 'ออกกำลังกายต่อเนื่อง 3 วัน',
+            icon: 'flame',
+            color: 'text-orange-500',
+            targetLabel: '3 วัน',
+            condition: (h, s) => s >= 3,
+            progress: (h, s) => Math.min((s/3)*100, 100)
+        },
+        {
+            id: 'streak-7',
+            title: 'สัปดาห์มหาโหด',
+            description: 'ออกกำลังกายต่อเนื่อง 7 วัน',
+            icon: 'flame',
+            color: 'text-blue-400',
+            targetLabel: '7 วัน',
+            condition: (h, s) => s >= 7,
+            progress: (h, s) => Math.min((s/7)*100, 100)
+        },
+        {
+            id: 'streak-30',
+            title: 'วินัยเหล็ก',
+            description: 'ออกกำลังกายต่อเนื่อง 30 วัน',
+            icon: 'crown',
+            color: 'text-yellow-400',
+            targetLabel: '30 วัน',
+            condition: (h, s) => s >= 30,
+            progress: (h, s) => Math.min((s/30)*100, 100)
+        },
+        {
+            id: 'rookie',
+            title: 'ก้าวแรก',
+            description: 'สะสมการออกกำลังกายครบ 1 ครั้ง',
+            icon: 'star',
+            color: 'text-emerald-400',
+            targetLabel: '1 ครั้ง',
+            condition: (h) => h.length >= 1,
+            progress: (h) => Math.min((h.length/1)*100, 100)
+        },
+        {
+            id: 'regular',
+            title: 'ขาประจำ',
+            description: 'สะสมการออกกำลังกายครบ 10 ครั้ง',
+            icon: 'medal',
+            color: 'text-slate-300',
+            targetLabel: '10 ครั้ง',
+            condition: (h) => h.length >= 10,
+            progress: (h) => Math.min((h.length/10)*100, 100)
+        },
+        {
+            id: 'veteran',
+            title: 'จอมเก๋า',
+            description: 'สะสมการออกกำลังกายครบ 50 ครั้ง',
+            icon: 'trophy',
+            color: 'text-yellow-500',
+            targetLabel: '50 ครั้ง',
+            condition: (h) => h.length >= 50,
+            progress: (h) => Math.min((h.length/50)*100, 100)
+        }
+    ];
+
+    const getIcon = (name: string, isUnlocked: boolean) => {
+        const className = isUnlocked ? "" : "opacity-30";
+        switch(name) {
+            case 'flame': return <Flame className={className} />;
+            case 'crown': return <Crown className={className} />;
+            case 'star': return <Star className={className} />;
+            case 'medal': return <Medal className={className} />;
+            case 'trophy': return <Trophy className={className} />;
+            default: return <Award className={className} />;
+        }
+    };
+
+    return (
+        <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             {/* Streak Card */}
+             <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl p-6 shadow-xl relative overflow-hidden text-white">
+                <div className="relative z-10 flex flex-col items-center">
+                    <div className="bg-white/20 p-4 rounded-full mb-3 backdrop-blur-sm shadow-inner">
+                        <Flame size={48} className="text-white drop-shadow-lg animate-pulse" />
+                    </div>
+                    <h2 className="text-5xl font-black mb-1 drop-shadow-md">{streak}</h2>
+                    <p className="text-lg font-bold opacity-90">วันต่อเนื่อง (Day Streak)</p>
+                    <p className="text-sm opacity-75 mt-2">อย่าหยุด! ทำต่อเนื่องเพื่อรับรางวัล</p>
+                </div>
+                {/* Background Decor */}
+                <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+             </div>
+
+             <div className="space-y-4">
+                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                     <Trophy size={20} className="text-yellow-500" />
+                     ภารกิจ & เหรียญรางวัล
+                 </h3>
+                 
+                 <div className="grid grid-cols-1 gap-4">
+                     {achievements.map((ach) => {
+                         const isUnlocked = ach.condition(history, streak);
+                         const progress = ach.progress(history, streak);
+                         
+                         return (
+                             <div key={ach.id} className={`relative overflow-hidden rounded-xl p-4 border transition-all ${isUnlocked ? 'bg-slate-800 border-blue-500/30 shadow-lg shadow-blue-900/10' : 'bg-slate-900/50 border-slate-800 opacity-80'}`}>
+                                 <div className="flex items-start gap-4">
+                                     <div className={`p-3 rounded-xl flex-shrink-0 ${isUnlocked ? `bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 shadow-inner ${ach.color}` : 'bg-slate-800 text-slate-600'}`}>
+                                         {getIcon(ach.icon, isUnlocked)}
+                                     </div>
+                                     <div className="flex-1">
+                                         <div className="flex justify-between items-start mb-1">
+                                             <h4 className={`font-bold text-lg ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>{ach.title}</h4>
+                                             {isUnlocked ? (
+                                                 <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-1 rounded-full font-bold border border-emerald-500/30 flex items-center gap-1">
+                                                     <Check size={10} /> สำเร็จ
+                                                 </span>
+                                             ) : (
+                                                 <span className="bg-slate-800 text-slate-500 text-[10px] px-2 py-1 rounded-full font-bold flex items-center gap-1">
+                                                     <Lock size={10} /> ล็อค
+                                                 </span>
+                                             )}
+                                         </div>
+                                         <p className="text-sm text-slate-400 mb-3">{ach.description}</p>
+                                         
+                                         {/* Progress Bar */}
+                                         <div className="relative pt-1">
+                                            <div className="flex mb-1 items-center justify-between">
+                                                <span className="text-[10px] font-semibold inline-block text-slate-500">
+                                                    ความคืบหน้า
+                                                </span>
+                                                <span className="text-[10px] font-semibold inline-block text-slate-400">
+                                                    {Math.round(progress)}%
+                                                </span>
+                                            </div>
+                                            <div className="overflow-hidden h-2 mb-1 text-xs flex rounded bg-slate-700">
+                                                <div style={{ width: `${progress}%` }} className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${isUnlocked ? 'bg-gradient-to-r from-blue-500 to-emerald-400' : 'bg-slate-600'}`}></div>
+                                            </div>
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+                         );
+                     })}
+                 </div>
+             </div>
+        </div>
+    );
+  };
+
   const renderProfile = () => {
     // Mifflin-St Jeor Equation
     let bmr = 0;
@@ -1145,7 +1356,7 @@ const App: React.FC = () => {
                         onChange={(e) => setUserProfile({...userProfile, weight: e.target.value})}
                         className="bg-transparent w-16 text-xl font-bold text-white focus:outline-none border-b border-dashed border-slate-600 focus:border-blue-500"
                     />
-                    <span className="text-sm font-normal text-slate-500">kg</span>
+                    <span className="text-sm font-normal text-slate-500">cm</span>
                 </div>
             </div>
             <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
@@ -1266,7 +1477,9 @@ const App: React.FC = () => {
 
       {/* Main Content Area */}
       <main className="p-6 pt-4">
-        {view === 'history' ? (
+        {view === 'challenges' ? (
+            renderChallenges()
+        ) : view === 'history' ? (
             viewingSession ? renderHistoryDetail() : renderHistory()
         ) : view === 'profile' ? (
             renderProfile()
@@ -1285,6 +1498,13 @@ const App: React.FC = () => {
           >
             <Dumbbell size={24} />
             <span className="text-[10px] font-bold">{currentSession ? 'กำลังฝึก' : 'ฝึกซ้อม'}</span>
+          </button>
+          <button
+            onClick={() => { setView('challenges'); setViewingSession(null); }}
+            className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${view === 'challenges' ? 'text-yellow-400 bg-yellow-500/10' : 'text-slate-500 hover:text-slate-300'}`}
+          >
+            <Trophy size={24} />
+            <span className="text-[10px] font-bold">ถ้วยรางวัล</span>
           </button>
           <button
             onClick={() => { setView('history'); setViewingSession(null); }}

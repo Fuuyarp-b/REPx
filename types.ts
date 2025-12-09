@@ -51,3 +51,14 @@ export interface UserProfile {
   gender: Gender;
   activityLevel: ActivityLevel;
 }
+
+export interface Achievement {
+  id: string;
+  title: string;
+  description: string;
+  icon: string; // Icon name to render
+  color: string;
+  condition: (history: WorkoutSession[], streak: number) => boolean;
+  progress: (history: WorkoutSession[], streak: number) => number; // 0 to 100
+  targetLabel: string;
+}

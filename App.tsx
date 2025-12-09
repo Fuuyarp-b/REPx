@@ -25,7 +25,9 @@ import {
   Check,
   Award,
   List,
-  BarChart3
+  BarChart3,
+  LogOut,
+  Edit2
 } from 'lucide-react';
 import { 
   UserProfile, 
@@ -568,7 +570,7 @@ const App: React.FC = () => {
                 <div className="inline-flex bg-gradient-to-tr from-blue-500 to-indigo-600 p-5 rounded-3xl shadow-2xl shadow-blue-500/20 mb-2 transform hover:scale-105 transition-transform duration-500">
                     <Dumbbell className="text-white w-12 h-12" strokeWidth={2.5} />
                 </div>
-                <h1 className="text-3xl font-bold text-white tracking-tight drop-shadow-lg">
+                <h1 className="text-4xl font-bold text-white tracking-tight drop-shadow-lg">
                     REPx <span className="text-blue-500">.</span>
                 </h1>
                 <p className="text-slate-400 font-medium">บันทึก พัฒนา และก้าวข้ามขีดจำกัด</p>
@@ -1336,7 +1338,7 @@ const App: React.FC = () => {
   };
 
   const renderProfile = () => {
-    // Calculation Logic (Same as before)
+    // Calculation Logic
     let bmr = 0;
     const w = parseFloat(userProfile.weight) || 0;
     const h = parseFloat(userProfile.height) || 0;
@@ -1368,141 +1370,152 @@ const App: React.FC = () => {
         const heightInMeters = h / 100;
         bmi = w / (heightInMeters * heightInMeters);
         
-        if (bmi < 18.5) { bmiCategory = 'น้ำหนักน้อย'; bmiColor = 'text-blue-400'; }
-        else if (bmi < 23) { bmiCategory = 'สมส่วน'; bmiColor = 'text-emerald-400'; }
-        else if (bmi < 25) { bmiCategory = 'ท้วม'; bmiColor = 'text-yellow-400'; }
-        else if (bmi < 30) { bmiCategory = 'อ้วน'; bmiColor = 'text-orange-400'; }
-        else { bmiCategory = 'อ้วนมาก'; bmiColor = 'text-red-400'; }
+        if (bmi < 18.5) { bmiCategory = 'Thin'; bmiColor = 'text-blue-400'; }
+        else if (bmi < 23) { bmiCategory = 'Normal'; bmiColor = 'text-emerald-400'; }
+        else if (bmi < 25) { bmiCategory = 'Overweight'; bmiColor = 'text-yellow-400'; }
+        else if (bmi < 30) { bmiCategory = 'Obese'; bmiColor = 'text-orange-400'; }
+        else { bmiCategory = 'Extremely Obese'; bmiColor = 'text-red-400'; }
     }
 
     return (
-      <div className="space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="bg-slate-900/60 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/5 relative overflow-hidden text-center shadow-2xl">
-            <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-blue-600/20 to-transparent"></div>
+      <div className="space-y-4 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        
+        {/* Compact User Header */}
+        <div className="bg-slate-900/60 backdrop-blur-xl rounded-3xl p-5 border border-white/5 shadow-xl flex items-center gap-4 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+                 <User size={120} />
+            </div>
             
             <div className="relative z-10">
-                <div className="relative inline-block mb-5">
-                     <div className="w-32 h-32 rounded-full border-[6px] border-slate-900 overflow-hidden shadow-2xl mx-auto bg-slate-800 relative z-10">
-                        <img src={userProfile.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
-                     </div>
-                     <div className="absolute -inset-1 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full blur-md opacity-70 z-0"></div>
-                     <button 
+                <div className="w-20 h-20 rounded-full border-2 border-slate-700 overflow-hidden shadow-lg bg-slate-800 relative">
+                    <img src={userProfile.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                    <button 
                         onClick={triggerFileInput}
-                        className="absolute bottom-2 right-0 bg-white text-blue-900 p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform z-20 border-4 border-slate-900"
-                     >
-                        <Camera size={16} />
-                     </button>
-                     <input 
-                        type="file" 
-                        ref={fileInputRef}
-                        onChange={handleAvatarUpload}
-                        className="hidden" 
-                        accept="image/*"
-                    />
+                        className="absolute bottom-0 inset-x-0 bg-black/60 h-6 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                    >
+                        <Camera size={12} className="text-white" />
+                    </button>
+                    <input type="file" ref={fileInputRef} onChange={handleAvatarUpload} className="hidden" accept="image/*" />
                 </div>
-                
-                <h2 className="text-3xl font-bold text-white tracking-tight mb-1">{userProfile.displayName}</h2>
-                <div className="inline-block bg-white/5 px-3 py-1 rounded-full border border-white/5">
-                    <p className="text-slate-400 text-xs font-medium">@{userProfile.username}</p>
+            </div>
+            
+            <div className="flex-1 relative z-10">
+                <h2 className="text-xl font-bold text-white tracking-tight leading-tight">{userProfile.displayName}</h2>
+                <p className="text-slate-400 text-xs font-medium">@{userProfile.username}</p>
+                <div className="mt-2 flex gap-2">
+                    <button 
+                        onClick={triggerFileInput}
+                        className="px-3 py-1 bg-white/5 hover:bg-white/10 rounded-lg text-[10px] font-bold text-blue-300 border border-white/5 transition-colors flex items-center gap-1"
+                    >
+                        <Edit2 size={10} /> Edit Photo
+                    </button>
                 </div>
             </div>
         </div>
 
-        {/* Health Stats Grid - Clean Glass Look */}
-        <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
-                <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-2">Age</p>
-                <p className="text-3xl font-bold text-white tracking-tight">{userProfile.age} <span className="text-sm font-medium text-slate-500">y</span></p>
-            </div>
-            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
-                <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-2">Weight</p>
-                <div className="flex items-baseline gap-1">
-                    <input 
-                        type="number" 
-                        value={userProfile.weight} 
-                        onChange={(e) => setUserProfile({...userProfile, weight: e.target.value})}
-                        className="bg-transparent w-full text-3xl font-bold text-white focus:outline-none border-b border-white/10 focus:border-blue-500 transition-colors tracking-tight"
-                    />
-                    <span className="text-sm font-medium text-slate-500">kg</span>
-                </div>
-            </div>
-            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
-                <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-2">Height</p>
-                <div className="flex items-baseline gap-1">
-                    <input 
-                        type="number" 
-                        value={userProfile.height} 
-                        onChange={(e) => setUserProfile({...userProfile, height: e.target.value})}
-                        className="bg-transparent w-full text-3xl font-bold text-white focus:outline-none border-b border-white/10 focus:border-blue-500 transition-colors tracking-tight"
-                    />
-                    <span className="text-sm font-medium text-slate-500">cm</span>
-                </div>
-            </div>
-            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
-                <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-2">Gender</p>
-                <p className="text-2xl font-bold text-white tracking-tight">
-                    {userProfile.gender === 'male' ? 'Male' : 'Female'}
-                </p>
-            </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-             {/* BMI Card */}
-             <div className="col-span-2 bg-gradient-to-r from-slate-900 to-slate-800 p-6 rounded-3xl border border-white/10 shadow-lg relative overflow-hidden">
-                 <div className="relative z-10 flex justify-between items-start">
-                     <div>
-                         <p className="text-slate-400 text-xs uppercase font-bold tracking-widest mb-1">BMI Score</p>
-                         <h3 className="text-5xl font-bold text-white tracking-tighter">{bmi.toFixed(1)}</h3>
-                     </div>
-                     <div className={`px-4 py-2 rounded-2xl bg-black/30 backdrop-blur-md border border-white/5 ${bmiColor}`}>
-                         <div className="text-base font-bold">{bmiCategory}</div>
+        {/* Unified Stats Bar */}
+        <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-white/5 shadow-lg overflow-hidden">
+             <div className="grid grid-cols-4 divide-x divide-white/5">
+                 <div className="p-3 text-center">
+                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Age</p>
+                     <p className="text-lg font-bold text-white">{userProfile.age}</p>
+                 </div>
+                 <div className="p-3 text-center">
+                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Weight</p>
+                     <div className="flex justify-center items-baseline gap-0.5">
+                        <input 
+                            type="number" 
+                            value={userProfile.weight} 
+                            onChange={(e) => setUserProfile({...userProfile, weight: e.target.value})}
+                            className="bg-transparent w-8 text-lg font-bold text-white text-center focus:outline-none focus:text-blue-400 transition-colors p-0 m-0"
+                        />
+                        <span className="text-[10px] text-slate-500 font-medium">kg</span>
                      </div>
                  </div>
-                 <div className="w-full bg-black/40 h-3 rounded-full mt-6 overflow-hidden border border-white/5">
-                     <div 
-                        className={`h-full transition-all duration-1000 ${
-                            bmi < 18.5 ? 'bg-blue-500' : 
-                            bmi < 23 ? 'bg-emerald-500' : 
-                            bmi < 25 ? 'bg-yellow-500' : 
-                            bmi < 30 ? 'bg-orange-500' : 'bg-red-500'
-                        }`} 
-                        style={{ width: `${Math.min(Math.max((bmi / 40) * 100, 5), 100)}%` }} 
-                     />
+                 <div className="p-3 text-center">
+                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Height</p>
+                     <div className="flex justify-center items-baseline gap-0.5">
+                        <input 
+                            type="number" 
+                            value={userProfile.height} 
+                            onChange={(e) => setUserProfile({...userProfile, height: e.target.value})}
+                            className="bg-transparent w-8 text-lg font-bold text-white text-center focus:outline-none focus:text-blue-400 transition-colors p-0 m-0"
+                        />
+                        <span className="text-[10px] text-slate-500 font-medium">cm</span>
+                     </div>
+                 </div>
+                 <div className="p-3 text-center">
+                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-1">Sex</p>
+                     <p className="text-lg font-bold text-white uppercase">{userProfile.gender === 'male' ? 'M' : 'F'}</p>
+                 </div>
+             </div>
+        </div>
+
+        {/* Compact Health Metrics */}
+        <div className="space-y-3">
+             {/* BMI Horizontal Bar */}
+             <div className="bg-slate-900/60 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/5 shadow-lg flex items-center justify-between gap-4">
+                 <div>
+                     <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">BMI Score</p>
+                     <div className="flex items-baseline gap-2">
+                         <h3 className="text-3xl font-bold text-white tracking-tighter">{bmi.toFixed(1)}</h3>
+                         <span className={`text-xs font-bold ${bmiColor}`}>{bmiCategory}</span>
+                     </div>
+                 </div>
+                 <div className="flex-1 max-w-[120px]">
+                     <div className="w-full bg-black/40 h-2 rounded-full overflow-hidden border border-white/5">
+                         <div 
+                            className={`h-full transition-all duration-1000 ${
+                                bmi < 18.5 ? 'bg-blue-500' : 
+                                bmi < 23 ? 'bg-emerald-500' : 
+                                bmi < 25 ? 'bg-yellow-500' : 
+                                bmi < 30 ? 'bg-orange-500' : 'bg-red-500'
+                            }`} 
+                            style={{ width: `${Math.min(Math.max((bmi / 40) * 100, 5), 100)}%` }} 
+                         />
+                     </div>
                  </div>
              </div>
              
-             {/* BMR & TDEE */}
-             <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-3xl border border-white/5">
-                 <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3">
-                     <Flame size={18} />
+             {/* BMR & TDEE Grid */}
+             <div className="grid grid-cols-2 gap-3">
+                 <div className="bg-slate-900/60 backdrop-blur-md p-3 rounded-2xl border border-white/5 flex items-center gap-3">
+                     <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-400">
+                         <Flame size={16} />
+                     </div>
+                     <div>
+                         <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">BMR</p>
+                         <p className="text-lg font-bold text-white tracking-tight">{Math.round(bmr)}</p>
+                     </div>
                  </div>
-                 <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-1">BMR</p>
-                 <p className="text-2xl font-bold text-white tracking-tight">{Math.round(bmr)}</p>
-             </div>
-             <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-3xl border border-white/5">
-                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 mb-3">
-                     <Zap size={18} />
+                 <div className="bg-slate-900/60 backdrop-blur-md p-3 rounded-2xl border border-white/5 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                         <Zap size={16} />
+                     </div>
+                     <div>
+                         <p className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">TDEE</p>
+                         <p className="text-lg font-bold text-white tracking-tight">{Math.round(tdee)}</p>
+                     </div>
                  </div>
-                 <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-1">TDEE</p>
-                 <p className="text-2xl font-bold text-white tracking-tight">{Math.round(tdee)}</p>
              </div>
         </div>
         
-        <div className="bg-white/5 p-6 rounded-3xl border border-white/5">
-            <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider block mb-2">Activity Level</label>
+        {/* Settings / Actions */}
+        <div className="bg-slate-900/60 backdrop-blur-md p-4 rounded-2xl border border-white/5 mt-2">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Activity Level</label>
             <div className="relative">
                 <select 
                     value={userProfile.activityLevel}
                     onChange={(e) => setUserProfile({...userProfile, activityLevel: e.target.value as ActivityLevel})}
-                    className="w-full bg-black/20 border border-white/10 text-white rounded-2xl px-4 py-4 outline-none appearance-none focus:border-blue-500 transition-colors font-medium"
+                    className="w-full bg-black/20 border border-white/10 text-white text-sm rounded-xl px-3 py-3 outline-none appearance-none focus:border-blue-500 transition-colors font-medium"
                 >
-                    <option value="sedentary">ไม่ออกกำลังกาย (Sedentary)</option>
-                    <option value="light">ออกเล็กน้อย 1-3 วัน/สัปดาห์</option>
-                    <option value="moderate">ปานกลาง 3-5 วัน/สัปดาห์</option>
-                    <option value="active">หนัก 6-7 วัน/สัปดาห์</option>
-                    <option value="very_active">หนักมาก (นักกีฬา)</option>
+                    <option value="sedentary">Sedentary (Little/no exercise)</option>
+                    <option value="light">Light (1-3 days/week)</option>
+                    <option value="moderate">Moderate (3-5 days/week)</option>
+                    <option value="active">Active (6-7 days/week)</option>
+                    <option value="very_active">Very Active (Athlete)</option>
                 </select>
-                <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-slate-500 pointer-events-none" size={16} />
+                <ArrowRight className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-slate-500 pointer-events-none" size={14} />
             </div>
         </div>
 
@@ -1513,9 +1526,9 @@ const App: React.FC = () => {
                 setUserProfile(EMPTY_PROFILE);
                 setHistory([]);
             }}
-            className="w-full py-4 text-red-400 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 rounded-2xl font-bold transition-all active:scale-95"
+            className="w-full py-3 text-red-400 bg-red-500/5 hover:bg-red-500/10 border border-red-500/10 rounded-xl text-sm font-bold transition-all active:scale-95 flex items-center justify-center gap-2"
         >
-            ออกจากระบบ
+            <LogOut size={16} /> Logout
         </button>
       </div>
     );

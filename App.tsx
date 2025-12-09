@@ -755,66 +755,67 @@ const App: React.FC = () => {
 
   const renderHome = () => {
     const workoutOptions: { id: string; type: WorkoutType; name: string; routine: Exercise[]; color: string, icon: React.ReactNode }[] = [
-      { id: 'push', type: 'Push', name: 'Push Day', routine: PUSH_ROUTINE, color: 'from-orange-500 to-red-600', icon: <Flame className="text-white" /> },
-      { id: 'pull', type: 'Pull', name: 'Pull Day', routine: PULL_ROUTINE, color: 'from-cyan-500 to-blue-600', icon: <Target className="text-white" /> },
-      { id: 'legs', type: 'Legs', name: 'Leg Day', routine: LEGS_ROUTINE, color: 'from-emerald-500 to-green-600', icon: <Trophy className="text-white" /> },
-      { id: 'custom', type: 'Custom', name: 'Custom', routine: [], color: 'from-purple-500 to-fuchsia-600', icon: <Star className="text-white" /> },
+      { id: 'push', type: 'Push', name: 'Push Day', routine: PUSH_ROUTINE, color: 'from-orange-500 to-red-600', icon: <Flame className="text-white" size={20} /> },
+      { id: 'pull', type: 'Pull', name: 'Pull Day', routine: PULL_ROUTINE, color: 'from-cyan-500 to-blue-600', icon: <Target className="text-white" size={20} /> },
+      { id: 'legs', type: 'Legs', name: 'Leg Day', routine: LEGS_ROUTINE, color: 'from-emerald-500 to-green-600', icon: <Trophy className="text-white" size={20} /> },
+      { id: 'custom', type: 'Custom', name: 'Custom', routine: [], color: 'from-purple-500 to-fuchsia-600', icon: <Star className="text-white" size={20} /> },
     ];
 
     return (
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
         {/* Welcome Banner */}
-        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 shadow-2xl shadow-indigo-500/30 text-white p-8">
+        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 shadow-2xl shadow-indigo-500/30 text-white p-6">
           <div className="absolute top-0 right-0 p-8 opacity-10 transform translate-x-1/4 -translate-y-1/4">
-             <Dumbbell size={200} />
+             <Dumbbell size={180} />
           </div>
           <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
           
           <div className="relative z-10">
-            <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
-                    <Crown size={20} className="text-yellow-300" />
+            <div className="flex items-center gap-2 mb-2">
+                <div className="p-1.5 bg-white/20 backdrop-blur-md rounded-lg">
+                    <Crown size={16} className="text-yellow-300" />
                 </div>
-                <span className="font-semibold text-blue-100 tracking-wide uppercase text-sm">Welcome Back</span>
+                <span className="font-semibold text-blue-100 tracking-wide uppercase text-[10px]">Welcome Back</span>
             </div>
-            <h2 className="text-3xl font-bold mb-2 tracking-tight leading-tight">{userProfile.displayName}</h2>
-            <div className="inline-block bg-black/20 backdrop-blur-sm px-4 py-2 rounded-xl mt-2 border border-white/10">
-                <p className="text-sm font-normal text-blue-100/90 leading-relaxed italic">"{quote}"</p>
+            <h2 className="text-2xl font-bold mb-1 tracking-tight leading-tight">{userProfile.displayName}</h2>
+            <div className="inline-block bg-black/20 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10 mt-1">
+                <p className="text-xs font-normal text-blue-100/90 leading-relaxed italic line-clamp-1">"{quote}"</p>
             </div>
           </div>
         </div>
 
         <div>
-          <h3 className="text-xl font-bold text-white mb-5 flex items-center gap-3 tracking-tight">
-            <div className="w-1 h-6 rounded-full bg-blue-500"></div>
-            เลือกโปรแกรมฝึก
+          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2 tracking-tight">
+            <div className="w-1 h-5 rounded-full bg-blue-500"></div>
+            Start Workout
           </h3>
-          <div className="grid grid-cols-1 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             {workoutOptions.map((item) => (
               <button
                 key={item.id}
                 onClick={() => startWorkout(item.type, item.routine)}
-                className="relative group overflow-hidden rounded-3xl h-28 text-left transition-all hover:scale-[1.02] shadow-lg hover:shadow-xl"
+                className="relative group overflow-hidden rounded-3xl aspect-[4/3] text-left transition-all hover:scale-[1.02] shadow-lg hover:shadow-xl flex flex-col justify-between p-4"
               >
                 {/* Background Gradient */}
-                <div className={`absolute inset-0 bg-gradient-to-r ${item.color} opacity-90 transition-opacity`} />
+                <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-90 group-hover:opacity-100 transition-opacity`} />
                 
-                {/* Decorative Circles */}
-                <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                {/* Decorative Elements */}
+                <div className="absolute -right-6 -top-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-125 transition-transform duration-700" />
                 
-                <div className="absolute inset-0 p-6 flex items-center justify-between z-10">
-                  <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner border border-white/20 group-hover:rotate-12 transition-transform duration-300">
-                          {item.icon}
-                      </div>
-                      <div>
-                          <span className="text-2xl font-bold text-white tracking-tight block">{item.name}</span>
-                          <span className="text-white/70 text-xs font-medium uppercase tracking-widest">Start Workout</span>
-                      </div>
-                  </div>
-                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-blue-600 transition-colors">
-                      <Play size={20} className="fill-current" />
-                  </div>
+                <div className="relative z-10">
+                    <div className="w-10 h-10 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner border border-white/20 mb-3 group-hover:rotate-12 transition-transform duration-300">
+                        {item.icon}
+                    </div>
+                </div>
+
+                <div className="relative z-10 flex justify-between items-end">
+                    <div>
+                        <span className="text-lg font-bold text-white tracking-tight leading-none block">{item.name}</span>
+                        <span className="text-white/70 text-[10px] font-semibold uppercase tracking-wider mt-1 block">Train Now</span>
+                    </div>
+                    <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-blue-600 transition-colors">
+                        <Play size={14} className="fill-current ml-0.5" />
+                    </div>
                 </div>
               </button>
             ))}

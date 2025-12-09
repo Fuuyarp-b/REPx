@@ -40,7 +40,7 @@ import {
   PUSH_ROUTINE, 
   PULL_ROUTINE, 
   LEGS_ROUTINE, 
-  MOTIVATIONAL_QUOTES,
+  MOTIVATIONAL_QUOTES, 
   PRESET_AVATARS,
   createSets
 } from './constants';

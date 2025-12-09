@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Pencil, Check, X, Plus, Trash2 } from 'lucide-react';
+import { Pencil, Check, X, Plus, Trash2, History } from 'lucide-react';
 import { Exercise, WorkoutSet } from '../types';
 
 interface ExerciseCardProps {
@@ -8,9 +8,17 @@ interface ExerciseCardProps {
   onUpdateName: (exerciseId: string, newName: string) => void;
   onAddSet: (exerciseId: string) => void;
   onRemove: (exerciseId: string) => void;
+  lastWeight?: number | null; // New prop for last session weight
 }
 
-export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onUpdateSet, onUpdateName, onAddSet, onRemove }) => {
+export const ExerciseCard: React.FC<ExerciseCardProps> = ({ 
+  exercise, 
+  onUpdateSet, 
+  onUpdateName, 
+  onAddSet, 
+  onRemove,
+  lastWeight 
+}) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [tempName, setTempName] = useState(exercise.name);
 
@@ -74,7 +82,15 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({ exercise, onUpdateSe
                     </button>
                 </div>
             )}
-            <p className="text-sm text-slate-400">{exercise.targetSets} Sets × {exercise.targetReps} Reps</p>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
+                <p className="text-sm text-slate-400">{exercise.targetSets} Sets × {exercise.targetReps} Reps</p>
+                {lastWeight && (
+                    <span className="flex items-center gap-1 text-xs font-medium text-blue-300 bg-blue-900/40 px-2 py-0.5 rounded-full border border-blue-500/20">
+                        <History size={10} />
+                        ล่าสุด: {lastWeight} kg
+                    </span>
+                )}
+            </div>
         </div>
         {!isEditingName && (
             <button 

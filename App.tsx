@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Dumbbell, 
@@ -281,6 +280,24 @@ const App: React.FC = () => {
 
   const triggerFileInput = () => {
     fileInputRef.current?.click();
+  };
+
+  // Helper to get last weight for a specific exercise name
+  const getLastWeight = (exerciseName: string): number | null => {
+      // Find the first session in history (sorted desc) that contains this exercise
+      // and has at least one completed set with a weight
+      for (const session of history) {
+          const ex = session.exercises.find(e => e.name === exerciseName);
+          if (ex) {
+              const completedSets = ex.sets.filter(s => s.completed && s.weight && Number(s.weight) > 0);
+              if (completedSets.length > 0) {
+                  // Find the max weight used in that session
+                  const weights = completedSets.map(s => Number(s.weight));
+                  return Math.max(...weights);
+              }
+          }
+      }
+      return null;
   };
 
   const startWorkout = (type: WorkoutType, routine: Exercise[]) => {
@@ -792,6 +809,7 @@ const App: React.FC = () => {
               onUpdateName={updateExerciseName}
               onAddSet={addSet}
               onRemove={removeExercise}
+              lastWeight={getLastWeight(exercise.name)}
             />
           ))}
         </div>

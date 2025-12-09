@@ -73,8 +73,8 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                 </div>
             ) : (
                 <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsEditingName(true)}>
-                    <h3 className="text-lg font-extrabold text-white break-words">{exercise.name}</h3>
-                    <Pencil size={14} className="text-slate-600 opacity-50" />
+                    <h3 className="text-lg font-semibold text-white break-words leading-tight">{exercise.name}</h3>
+                    <Pencil size={14} className="text-slate-600 opacity-50 hover:opacity-100 transition-opacity" />
                 </div>
             )}
             <div className="flex flex-wrap items-center gap-2 mt-2">
@@ -132,7 +132,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                     placeholder="-"
                     value={set.weight}
                     onChange={(e) => handleSetChange(set, 'weight', e.target.value)}
-                    className={`w-full h-12 bg-black/30 text-center text-white text-lg font-bold rounded-2xl border border-transparent focus:border-blue-500/50 focus:bg-black/50 focus:outline-none transition-all placeholder:text-slate-700`}
+                    className={`w-full h-12 bg-black/30 text-center text-white text-lg font-semibold rounded-2xl border border-transparent focus:border-blue-500/50 focus:bg-black/50 focus:outline-none transition-all placeholder:text-slate-700`}
                 />
             </div>
 
@@ -143,7 +143,7 @@ export const ExerciseCard: React.FC<ExerciseCardProps> = ({
                     placeholder="-"
                     value={set.reps}
                     onChange={(e) => handleSetChange(set, 'reps', e.target.value)}
-                    className={`w-full h-12 bg-black/30 text-center text-white text-lg font-bold rounded-2xl border border-transparent focus:border-blue-500/50 focus:bg-black/50 focus:outline-none transition-all placeholder:text-slate-700`}
+                    className={`w-full h-12 bg-black/30 text-center text-white text-lg font-semibold rounded-2xl border border-transparent focus:border-blue-500/50 focus:bg-black/50 focus:outline-none transition-all placeholder:text-slate-700`}
                 />
             </div>
 

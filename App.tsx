@@ -568,7 +568,7 @@ const App: React.FC = () => {
                 <div className="inline-flex bg-gradient-to-tr from-blue-500 to-indigo-600 p-5 rounded-3xl shadow-2xl shadow-blue-500/20 mb-2 transform hover:scale-105 transition-transform duration-500">
                     <Dumbbell className="text-white w-12 h-12" strokeWidth={2.5} />
                 </div>
-                <h1 className="text-4xl font-extrabold text-white tracking-tighter drop-shadow-lg">
+                <h1 className="text-3xl font-bold text-white tracking-tight drop-shadow-lg">
                     REPx <span className="text-blue-500">.</span>
                 </h1>
                 <p className="text-slate-400 font-medium">บันทึก พัฒนา และก้าวข้ามขีดจำกัด</p>
@@ -578,13 +578,13 @@ const App: React.FC = () => {
                 <div className="flex bg-black/20 p-1.5 rounded-2xl mb-6">
                     <button 
                         onClick={() => { setAuthMode('login'); setAuthError(''); }}
-                        className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${authMode === 'login' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-400 hover:text-white'}`}
+                        className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${authMode === 'login' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-400 hover:text-white'}`}
                     >
                         <LogIn size={18} /> เข้าสู่ระบบ
                     </button>
                     <button 
                         onClick={() => { setAuthMode('register'); setAuthError(''); }}
-                        className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${authMode === 'register' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' : 'text-slate-400 hover:text-white'}`}
+                        className={`flex-1 py-3 text-sm font-semibold rounded-xl transition-all flex items-center justify-center gap-2 ${authMode === 'register' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' : 'text-slate-400 hover:text-white'}`}
                     >
                         <UserPlus size={18} /> สมัครใหม่
                     </button>
@@ -592,13 +592,13 @@ const App: React.FC = () => {
 
                 <div className="space-y-5">
                     <div>
-                        <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider mb-2 block">Username</label>
+                        <label className="text-xs font-semibold text-slate-400 ml-1 uppercase tracking-wide mb-2 block">Username</label>
                         <div className="relative group">
                             <input 
                                 type="text" 
                                 value={userProfile.username}
                                 onChange={(e) => setUserProfile({...userProfile, username: e.target.value.toLowerCase().replace(/\s/g, '')})}
-                                className="w-full bg-black/20 border border-white/10 rounded-2xl px-4 py-4 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-slate-600 group-hover:border-white/20"
+                                className="w-full bg-black/20 border border-white/10 rounded-2xl px-4 py-4 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-slate-600 group-hover:border-white/20 font-medium"
                                 placeholder="ตั้งชื่อผู้ใช้ภาษาอังกฤษ..."
                             />
                             <User className="absolute right-4 top-4 text-slate-600" size={20} />
@@ -608,13 +608,13 @@ const App: React.FC = () => {
                     {authMode === 'register' && (
                         <div className="space-y-5 animate-in fade-in slide-in-from-top-4 duration-500">
                              <div>
-                                <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider mb-2 block">Display Name</label>
+                                <label className="text-xs font-semibold text-slate-400 ml-1 uppercase tracking-wide mb-2 block">Display Name</label>
                                 <div className="relative group">
                                     <input 
                                         type="text" 
                                         value={userProfile.displayName}
                                         onChange={(e) => setUserProfile({...userProfile, displayName: e.target.value})}
-                                        className="w-full bg-black/20 border border-white/10 rounded-2xl px-4 py-4 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-600 group-hover:border-white/20"
+                                        className="w-full bg-black/20 border border-white/10 rounded-2xl px-4 py-4 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-600 group-hover:border-white/20 font-medium"
                                         placeholder="ชื่อเล่นของคุณ..."
                                     />
                                     <Target className="absolute right-4 top-4 text-slate-600" size={20} />
@@ -623,18 +623,18 @@ const App: React.FC = () => {
 
                             {/* Gender Selection */}
                             <div>
-                                <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider mb-2 block">เพศ</label>
+                                <label className="text-xs font-semibold text-slate-400 ml-1 uppercase tracking-wide mb-2 block">เพศ</label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <button
                                         onClick={() => setUserProfile({...userProfile, gender: 'male'})}
-                                        className={`py-3 px-4 rounded-xl border-2 flex items-center justify-center gap-2 transition-all ${userProfile.gender === 'male' ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-black/20 border-transparent text-slate-500 hover:bg-black/40'}`}
+                                        className={`py-3 px-4 rounded-xl border flex items-center justify-center gap-2 transition-all font-medium ${userProfile.gender === 'male' ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-black/20 border-transparent text-slate-500 hover:bg-black/40'}`}
                                     >
                                         <div className={`w-3 h-3 rounded-full ${userProfile.gender === 'male' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-slate-600'}`} />
                                         ชาย
                                     </button>
                                     <button
                                         onClick={() => setUserProfile({...userProfile, gender: 'female'})}
-                                        className={`py-3 px-4 rounded-xl border-2 flex items-center justify-center gap-2 transition-all ${userProfile.gender === 'female' ? 'bg-pink-500/20 border-pink-500 text-pink-400' : 'bg-black/20 border-transparent text-slate-500 hover:bg-black/40'}`}
+                                        className={`py-3 px-4 rounded-xl border flex items-center justify-center gap-2 transition-all font-medium ${userProfile.gender === 'female' ? 'bg-pink-500/20 border-pink-500 text-pink-400' : 'bg-black/20 border-transparent text-slate-500 hover:bg-black/40'}`}
                                     >
                                         <div className={`w-3 h-3 rounded-full ${userProfile.gender === 'female' ? 'bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)]' : 'bg-slate-600'}`} />
                                         หญิง
@@ -644,26 +644,26 @@ const App: React.FC = () => {
 
                             <div className="grid grid-cols-3 gap-3">
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase mb-1 block">อายุ</label>
-                                    <input type="number" value={userProfile.age} onChange={(e) => setUserProfile({...userProfile, age: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-2xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none" />
+                                    <label className="text-[10px] font-semibold text-slate-400 ml-1 uppercase mb-1 block">อายุ</label>
+                                    <input type="number" value={userProfile.age} onChange={(e) => setUserProfile({...userProfile, age: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-2xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none font-medium" />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase mb-1 block">นน. (kg)</label>
-                                    <input type="number" value={userProfile.weight} onChange={(e) => setUserProfile({...userProfile, weight: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-2xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none" />
+                                    <label className="text-[10px] font-semibold text-slate-400 ml-1 uppercase mb-1 block">นน. (kg)</label>
+                                    <input type="number" value={userProfile.weight} onChange={(e) => setUserProfile({...userProfile, weight: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-2xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none font-medium" />
                                 </div>
                                 <div>
-                                    <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase mb-1 block">สูง (cm)</label>
-                                    <input type="number" value={userProfile.height} onChange={(e) => setUserProfile({...userProfile, height: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-2xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none" />
+                                    <label className="text-[10px] font-semibold text-slate-400 ml-1 uppercase mb-1 block">สูง (cm)</label>
+                                    <input type="number" value={userProfile.height} onChange={(e) => setUserProfile({...userProfile, height: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-2xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none font-medium" />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider mb-2 block">ระดับกิจกรรม</label>
+                                <label className="text-xs font-semibold text-slate-400 ml-1 uppercase tracking-wide mb-2 block">ระดับกิจกรรม</label>
                                 <div className="relative">
                                     <select 
                                         value={userProfile.activityLevel}
                                         onChange={(e) => setUserProfile({...userProfile, activityLevel: e.target.value as ActivityLevel})}
-                                        className="w-full bg-black/20 border border-white/10 text-white rounded-2xl px-4 py-4 appearance-none outline-none focus:ring-2 focus:ring-blue-500"
+                                        className="w-full bg-black/20 border border-white/10 text-white rounded-2xl px-4 py-4 appearance-none outline-none focus:ring-2 focus:ring-blue-500 font-medium"
                                     >
                                         <option value="sedentary">ไม่ออกกำลังกาย (Sedentary)</option>
                                         <option value="light">ออกเล็กน้อย 1-3 วัน/สัปดาห์</option>
@@ -678,11 +678,11 @@ const App: React.FC = () => {
                             </div>
 
                             <div>
-                                <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider mb-3 flex justify-between items-center">
+                                <label className="text-xs font-semibold text-slate-400 ml-1 uppercase tracking-wide mb-3 flex justify-between items-center">
                                     <span>รูปโปรไฟล์</span>
                                     <button 
                                         onClick={triggerFileInput} 
-                                        className="text-blue-400 flex items-center gap-1 hover:text-blue-300 transition-colors text-[10px] bg-blue-500/10 px-2 py-1 rounded-lg"
+                                        className="text-blue-400 flex items-center gap-1 hover:text-blue-300 transition-colors text-[10px] bg-blue-500/10 px-2 py-1 rounded-lg font-medium"
                                     >
                                         <Upload size={12} /> อัปโหลดเอง
                                     </button>
@@ -775,17 +775,17 @@ const App: React.FC = () => {
                 <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
                     <Crown size={20} className="text-yellow-300" />
                 </div>
-                <span className="font-bold text-blue-100 tracking-wide uppercase text-sm">Welcome Back</span>
+                <span className="font-semibold text-blue-100 tracking-wide uppercase text-sm">Welcome Back</span>
             </div>
-            <h2 className="text-3xl font-extrabold mb-2 tracking-tight leading-tight">{userProfile.displayName}</h2>
+            <h2 className="text-3xl font-bold mb-2 tracking-tight leading-tight">{userProfile.displayName}</h2>
             <div className="inline-block bg-black/20 backdrop-blur-sm px-4 py-2 rounded-xl mt-2 border border-white/10">
-                <p className="text-sm font-medium italic text-blue-100">"{quote}"</p>
+                <p className="text-sm font-normal text-blue-100/90 leading-relaxed italic">"{quote}"</p>
             </div>
           </div>
         </div>
 
         <div>
-          <h3 className="text-xl font-bold text-white mb-5 flex items-center gap-3">
+          <h3 className="text-xl font-bold text-white mb-5 flex items-center gap-3 tracking-tight">
             <div className="w-1 h-6 rounded-full bg-blue-500"></div>
             เลือกโปรแกรมฝึก
           </h3>
@@ -844,7 +844,7 @@ const App: React.FC = () => {
         <div className="flex justify-between items-center mb-2">
             <button 
                 onClick={endWorkout}
-                className="bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-colors border border-white/5"
+                className="bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-colors border border-white/5"
             >
                 <ChevronLeft size={18} /> ออก
             </button>
@@ -853,7 +853,7 @@ const App: React.FC = () => {
             </div>
             <button 
                 onClick={saveWorkout}
-                className="bg-white text-blue-900 hover:bg-blue-50 px-5 py-2 rounded-xl text-sm font-black shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-2"
+                className="bg-white text-blue-900 hover:bg-blue-50 px-5 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-2"
             >
                 บันทึก <Check size={16} />
             </button>
@@ -866,7 +866,7 @@ const App: React.FC = () => {
                    <Dumbbell className="text-white" size={28} />
                 </div>
                <div>
-                   <h2 className="text-2xl font-extrabold text-white tracking-tight">{currentSession.title}</h2>
+                   <h2 className="text-2xl font-bold text-white tracking-tight">{currentSession.title}</h2>
                    <p className="text-slate-400 text-sm font-medium flex items-center gap-2 mt-1">
                        <Calendar size={14} />
                        {new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long' })}
@@ -884,7 +884,7 @@ const App: React.FC = () => {
                         <select
                             value={selectedSuggestion}
                             onChange={(e) => setSelectedSuggestion(e.target.value)}
-                            className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-500 appearance-none"
+                            className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-500 appearance-none font-medium"
                         >
                             <option value="">-- เลือกท่าจากประวัติ --</option>
                             {uniqueHistoryExercises.map((name, idx) => (
@@ -921,7 +921,7 @@ const App: React.FC = () => {
 
         <button 
             onClick={addNewExercise}
-            className="w-full py-5 bg-slate-900/50 border-2 border-dashed border-slate-700 hover:border-blue-500 hover:bg-blue-500/10 text-slate-400 hover:text-blue-400 rounded-3xl transition-all flex items-center justify-center gap-2 font-bold group"
+            className="w-full py-5 bg-slate-900/50 border-2 border-dashed border-slate-700 hover:border-blue-500 hover:bg-blue-500/10 text-slate-400 hover:text-blue-400 rounded-3xl transition-all flex items-center justify-center gap-2 font-semibold group"
         >
             <div className="bg-slate-800 group-hover:bg-blue-500 p-1 rounded-full text-white transition-colors">
                 <Plus size={16} />
@@ -955,7 +955,7 @@ const App: React.FC = () => {
                   >
                       <ChevronLeft size={20} />
                   </button>
-                  <h2 className="text-xl font-bold text-white">รายละเอียดการฝึก</h2>
+                  <h2 className="text-xl font-bold text-white tracking-tight">รายละเอียดการฝึก</h2>
               </div>
 
               <div className={`bg-gradient-to-br from-${themeColor}-900/50 to-slate-900 rounded-[2rem] p-6 border border-${themeColor}-500/30 shadow-xl overflow-hidden relative`}>
@@ -964,13 +964,13 @@ const App: React.FC = () => {
                   <div className="relative z-10">
                       <div className="flex justify-between items-start mb-6">
                           <div>
-                              <h3 className="text-2xl font-extrabold text-white mb-1 leading-tight">{viewingSession.title}</h3>
+                              <h3 className="text-2xl font-bold text-white mb-1 leading-tight tracking-tight">{viewingSession.title}</h3>
                               <div className="flex items-center gap-2 text-${themeColor}-300 text-sm font-medium">
                                   <Calendar size={14} />
                                   {new Date(viewingSession.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                               </div>
                           </div>
-                          <div className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-${themeColor}-500 text-white shadow-lg shadow-${themeColor}-500/40`}>
+                          <div className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider bg-${themeColor}-500 text-white shadow-lg shadow-${themeColor}-500/40`}>
                               {viewingSession.type}
                           </div>
                       </div>
@@ -980,20 +980,20 @@ const App: React.FC = () => {
                               <div className="flex items-center gap-2 text-slate-400 mb-2 text-[10px] uppercase font-bold tracking-widest">
                                   <Clock size={12} /> ระยะเวลา
                               </div>
-                              <div className="text-xl font-bold text-white">{duration}</div>
+                              <div className="text-xl font-bold text-white tracking-tight">{duration}</div>
                           </div>
                           <div className="bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-sm">
                               <div className="flex items-center gap-2 text-slate-400 mb-2 text-[10px] uppercase font-bold tracking-widest">
                                   <Dumbbell size={12} /> ท่าที่เล่น
                               </div>
-                              <div className="text-xl font-bold text-white">{performedExercises.length} ท่า</div>
+                              <div className="text-xl font-bold text-white tracking-tight">{performedExercises.length} ท่า</div>
                           </div>
                       </div>
                   </div>
               </div>
 
               <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2 tracking-tight">
                       <div className="w-1 h-5 bg-white rounded-full"></div>
                       Timeline การฝึก
                   </h3>
@@ -1006,13 +1006,13 @@ const App: React.FC = () => {
                           <div key={i} className="bg-slate-800/40 rounded-2xl p-5 border border-white/5 relative overflow-hidden">
                               <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-slate-500 to-transparent opacity-30"></div>
                               <div className="flex justify-between items-center mb-4 pl-3">
-                                  <h4 className="font-bold text-white text-lg">{ex.name}</h4>
+                                  <h4 className="font-semibold text-white text-lg tracking-tight">{ex.name}</h4>
                               </div>
                               <div className="grid grid-cols-3 gap-2 pl-3">
                                   {ex.sets.filter(s => s.completed).map((s, idx) => (
                                       <div key={idx} className="flex flex-col items-center justify-center p-2 bg-black/20 rounded-xl border border-white/5">
                                           <span className="text-[10px] text-slate-500 font-bold mb-1">SET {s.setNumber}</span>
-                                          <span className="font-extrabold text-white text-sm">
+                                          <span className="font-bold text-white text-sm">
                                               {s.weight}<span className="text-[10px] font-normal text-slate-400 ml-0.5">kg</span> 
                                               <span className="mx-1 text-slate-600">/</span> 
                                               {s.reps}
@@ -1060,7 +1060,7 @@ const App: React.FC = () => {
     return (
       <div className="space-y-8 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between">
-             <h2 className="text-2xl font-extrabold text-white tracking-tight">Summary</h2>
+             <h2 className="text-2xl font-bold text-white tracking-tight">Summary</h2>
              <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-white/5">
                  {(['all', 'week', 'month', 'year'] as const).map(f => (
                      <button
@@ -1080,19 +1080,19 @@ const App: React.FC = () => {
              <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/20 rounded-full blur-xl group-hover:bg-blue-500/30 transition-colors"></div>
              <Calendar className="text-blue-400 mb-2 relative z-10" size={24} />
              <p className="text-blue-200/60 text-[10px] font-bold uppercase tracking-widest mb-1 relative z-10">Total Workouts</p>
-             <h3 className="text-4xl font-extrabold text-white relative z-10">{totalSessions}</h3>
+             <h3 className="text-3xl font-bold text-white relative z-10 tracking-tight">{totalSessions}</h3>
           </div>
           <div className="bg-gradient-to-br from-purple-900/30 to-slate-900/80 backdrop-blur-md border border-purple-500/20 p-6 rounded-3xl relative overflow-hidden group">
              <div className="absolute -right-4 -top-4 w-24 h-24 bg-purple-500/20 rounded-full blur-xl group-hover:bg-purple-500/30 transition-colors"></div>
              <Clock className="text-purple-400 mb-2 relative z-10" size={24} />
              <p className="text-purple-200/60 text-[10px] font-bold uppercase tracking-widest mb-1 relative z-10">Total Hours</p>
-             <h3 className="text-4xl font-extrabold text-white relative z-10">{totalHours}</h3>
+             <h3 className="text-3xl font-bold text-white relative z-10 tracking-tight">{totalHours}</h3>
           </div>
         </div>
 
         {/* Distribution Bar */}
         <div className="bg-slate-900/50 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
-            <h4 className="text-xs font-bold text-slate-300 mb-4 uppercase tracking-wider flex justify-between">
+            <h4 className="text-xs font-semibold text-slate-300 mb-4 uppercase tracking-wider flex justify-between">
                 Type Distribution
                 <span className="text-slate-500 font-normal normal-case">Based on filter</span>
             </h4>
@@ -1111,7 +1111,7 @@ const App: React.FC = () => {
         </div>
 
         <div className="space-y-4">
-          <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+          <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2 tracking-tight">
               <List size={18} className="text-slate-400" />
               History Log
           </h3>
@@ -1139,8 +1139,8 @@ const App: React.FC = () => {
                       <div className="flex justify-between items-start mb-2">
                           <div>
                               <div className="flex items-center gap-2 mb-1">
-                                  <h4 className="font-bold text-white text-base">{session.title}</h4>
-                                  <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider bg-${themeColor}-500/10 text-${themeColor}-400 border border-${themeColor}-500/20`}>
+                                  <h4 className="font-semibold text-white text-base tracking-tight">{session.title}</h4>
+                                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider bg-${themeColor}-500/10 text-${themeColor}-400 border border-${themeColor}-500/20`}>
                                       {session.type}
                                   </span>
                               </div>
@@ -1151,7 +1151,7 @@ const App: React.FC = () => {
                           </div>
                           
                           <div className="text-right">
-                              <p className="text-white font-bold text-sm">{formatDuration(session.startTime, session.endTime)}</p>
+                              <p className="text-white font-bold text-sm tracking-tight">{formatDuration(session.startTime, session.endTime)}</p>
                           </div>
                       </div>
 
@@ -1266,7 +1266,7 @@ const App: React.FC = () => {
                     <div className="bg-white/10 p-5 rounded-full mb-4 backdrop-blur-md border border-white/20 shadow-inner">
                         <Flame size={56} className="text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.6)] animate-pulse" />
                     </div>
-                    <h2 className="text-6xl font-extrabold mb-1 drop-shadow-xl">{streak}</h2>
+                    <h2 className="text-6xl font-extrabold mb-1 drop-shadow-xl tracking-tighter">{streak}</h2>
                     <p className="text-xl font-bold text-orange-100 uppercase tracking-widest">Day Streak</p>
                     <div className="mt-4 bg-black/20 px-4 py-2 rounded-xl backdrop-blur-sm">
                         <p className="text-sm font-medium text-white/90">Keep the fire burning! 🔥</p>
@@ -1275,7 +1275,7 @@ const App: React.FC = () => {
              </div>
 
              <div className="space-y-4">
-                 <h3 className="text-xl font-extrabold text-white flex items-center gap-3">
+                 <h3 className="text-xl font-bold text-white flex items-center gap-3 tracking-tight">
                      <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-400">
                         <Trophy size={20} />
                      </div>
@@ -1298,14 +1298,14 @@ const App: React.FC = () => {
 
                                      <div className="flex-1 min-w-0">
                                          <div className="flex justify-between items-start mb-1">
-                                             <h4 className={`font-bold text-lg truncate pr-2 ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>{ach.title}</h4>
+                                             <h4 className={`font-bold text-lg truncate pr-2 tracking-tight ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>{ach.title}</h4>
                                              {isUnlocked && (
-                                                 <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider border border-emerald-500/30">
+                                                 <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider border border-emerald-500/30">
                                                      Unlocked
                                                  </span>
                                              )}
                                          </div>
-                                         <p className="text-xs text-slate-400 mb-4 line-clamp-2">{ach.description}</p>
+                                         <p className="text-xs text-slate-400 mb-4 line-clamp-2 leading-relaxed">{ach.description}</p>
                                          
                                          {/* Modern Progress Bar */}
                                          <div className="relative">
@@ -1405,9 +1405,9 @@ const App: React.FC = () => {
                     />
                 </div>
                 
-                <h2 className="text-3xl font-extrabold text-white tracking-tight mb-1">{userProfile.displayName}</h2>
+                <h2 className="text-3xl font-bold text-white tracking-tight mb-1">{userProfile.displayName}</h2>
                 <div className="inline-block bg-white/5 px-3 py-1 rounded-full border border-white/5">
-                    <p className="text-slate-400 text-xs font-mono">@{userProfile.username}</p>
+                    <p className="text-slate-400 text-xs font-medium">@{userProfile.username}</p>
                 </div>
             </div>
         </div>
@@ -1416,7 +1416,7 @@ const App: React.FC = () => {
         <div className="grid grid-cols-2 gap-4">
             <div className="bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
                 <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-2">Age</p>
-                <p className="text-3xl font-extrabold text-white">{userProfile.age} <span className="text-sm font-medium text-slate-500">y</span></p>
+                <p className="text-3xl font-bold text-white tracking-tight">{userProfile.age} <span className="text-sm font-medium text-slate-500">y</span></p>
             </div>
             <div className="bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
                 <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-2">Weight</p>
@@ -1425,7 +1425,7 @@ const App: React.FC = () => {
                         type="number" 
                         value={userProfile.weight} 
                         onChange={(e) => setUserProfile({...userProfile, weight: e.target.value})}
-                        className="bg-transparent w-full text-3xl font-extrabold text-white focus:outline-none border-b border-white/10 focus:border-blue-500 transition-colors"
+                        className="bg-transparent w-full text-3xl font-bold text-white focus:outline-none border-b border-white/10 focus:border-blue-500 transition-colors tracking-tight"
                     />
                     <span className="text-sm font-medium text-slate-500">kg</span>
                 </div>
@@ -1437,14 +1437,14 @@ const App: React.FC = () => {
                         type="number" 
                         value={userProfile.height} 
                         onChange={(e) => setUserProfile({...userProfile, height: e.target.value})}
-                        className="bg-transparent w-full text-3xl font-extrabold text-white focus:outline-none border-b border-white/10 focus:border-blue-500 transition-colors"
+                        className="bg-transparent w-full text-3xl font-bold text-white focus:outline-none border-b border-white/10 focus:border-blue-500 transition-colors tracking-tight"
                     />
                     <span className="text-sm font-medium text-slate-500">cm</span>
                 </div>
             </div>
             <div className="bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
                 <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-2">Gender</p>
-                <p className="text-2xl font-extrabold text-white">
+                <p className="text-2xl font-bold text-white tracking-tight">
                     {userProfile.gender === 'male' ? 'Male' : 'Female'}
                 </p>
             </div>
@@ -1456,7 +1456,7 @@ const App: React.FC = () => {
                  <div className="relative z-10 flex justify-between items-start">
                      <div>
                          <p className="text-slate-400 text-xs uppercase font-bold tracking-widest mb-1">BMI Score</p>
-                         <h3 className="text-5xl font-extrabold text-white tracking-tighter">{bmi.toFixed(1)}</h3>
+                         <h3 className="text-5xl font-bold text-white tracking-tighter">{bmi.toFixed(1)}</h3>
                      </div>
                      <div className={`px-4 py-2 rounded-2xl bg-black/30 backdrop-blur-md border border-white/5 ${bmiColor}`}>
                          <div className="text-base font-bold">{bmiCategory}</div>
@@ -1481,14 +1481,14 @@ const App: React.FC = () => {
                      <Flame size={18} />
                  </div>
                  <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-1">BMR</p>
-                 <p className="text-2xl font-extrabold text-white">{Math.round(bmr)}</p>
+                 <p className="text-2xl font-bold text-white tracking-tight">{Math.round(bmr)}</p>
              </div>
              <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-3xl border border-white/5">
                 <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 mb-3">
                      <Zap size={18} />
                  </div>
                  <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-1">TDEE</p>
-                 <p className="text-2xl font-extrabold text-white">{Math.round(tdee)}</p>
+                 <p className="text-2xl font-bold text-white tracking-tight">{Math.round(tdee)}</p>
              </div>
         </div>
         
@@ -1498,7 +1498,7 @@ const App: React.FC = () => {
                 <select 
                     value={userProfile.activityLevel}
                     onChange={(e) => setUserProfile({...userProfile, activityLevel: e.target.value as ActivityLevel})}
-                    className="w-full bg-black/20 border border-white/10 text-white rounded-2xl px-4 py-4 outline-none appearance-none focus:border-blue-500 transition-colors"
+                    className="w-full bg-black/20 border border-white/10 text-white rounded-2xl px-4 py-4 outline-none appearance-none focus:border-blue-500 transition-colors font-medium"
                 >
                     <option value="sedentary">ไม่ออกกำลังกาย (Sedentary)</option>
                     <option value="light">ออกเล็กน้อย 1-3 วัน/สัปดาห์</option>
@@ -1559,7 +1559,7 @@ const App: React.FC = () => {
               <div className="bg-blue-600 p-1.5 rounded-lg">
                   <Dumbbell size={16} className="text-white" />
               </div>
-              <h1 className="text-xl font-extrabold tracking-tighter text-white">
+              <h1 className="text-xl font-bold tracking-tighter text-white">
                 REPx <span className="text-blue-500">.</span>
               </h1>
             </div>

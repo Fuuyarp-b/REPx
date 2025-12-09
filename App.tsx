@@ -22,10 +22,10 @@ import {
   Flame,
   Star,
   Crown,
-  Lock,
   Check,
   Award,
-  List
+  List,
+  BarChart3
 } from 'lucide-react';
 import { 
   UserProfile, 
@@ -558,81 +558,85 @@ const App: React.FC = () => {
   // --- Render Functions ---
 
   const renderAuthScreen = () => (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-6 relative overflow-hidden">
-        {/* Background Accents */}
-        <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-blue-600/20 rounded-full blur-[80px]" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-64 h-64 bg-purple-600/20 rounded-full blur-[80px]" />
+    <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden bg-[#020617]">
+        {/* Animated Background Blobs */}
+        <div className="absolute top-[-20%] left-[-20%] w-96 h-96 bg-blue-600/30 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute bottom-[-20%] right-[-20%] w-96 h-96 bg-purple-600/30 rounded-full blur-[100px] animate-pulse" style={{ animationDelay: '1s' }} />
 
-        <div className="w-full max-w-md space-y-8 relative z-10">
-            <div className="text-center space-y-2">
-                <div className="inline-flex bg-gradient-to-tr from-blue-600 to-indigo-600 p-4 rounded-2xl shadow-xl mb-4">
-                    <Dumbbell className="text-white w-10 h-10" />
+        <div className="w-full max-w-md space-y-8 relative z-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
+            <div className="text-center space-y-3">
+                <div className="inline-flex bg-gradient-to-tr from-blue-500 to-indigo-600 p-5 rounded-3xl shadow-2xl shadow-blue-500/20 mb-2 transform hover:scale-105 transition-transform duration-500">
+                    <Dumbbell className="text-white w-12 h-12" strokeWidth={2.5} />
                 </div>
-                <h1 className="text-3xl font-bold text-white tracking-tight">REPx By FUUYARP</h1>
-                <p className="text-slate-400">บันทึก พัฒนา และก้าวข้ามขีดจำกัด</p>
+                <h1 className="text-4xl font-extrabold text-white tracking-tighter drop-shadow-lg">
+                    REPx <span className="text-blue-500">.</span>
+                </h1>
+                <p className="text-slate-400 font-medium">บันทึก พัฒนา และก้าวข้ามขีดจำกัด</p>
             </div>
 
-            <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-6 rounded-2xl shadow-xl">
-                <div className="flex bg-slate-800 p-1 rounded-xl mb-6">
+            <div className="bg-white/5 backdrop-blur-xl border border-white/10 p-6 rounded-3xl shadow-2xl">
+                <div className="flex bg-black/20 p-1.5 rounded-2xl mb-6">
                     <button 
                         onClick={() => { setAuthMode('login'); setAuthError(''); }}
-                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${authMode === 'login' ? 'bg-slate-700 text-white shadow' : 'text-slate-400'}`}
+                        className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${authMode === 'login' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/25' : 'text-slate-400 hover:text-white'}`}
                     >
-                        <LogIn size={16} /> เข้าสู่ระบบ
+                        <LogIn size={18} /> เข้าสู่ระบบ
                     </button>
                     <button 
                         onClick={() => { setAuthMode('register'); setAuthError(''); }}
-                        className={`flex-1 py-2 text-sm font-bold rounded-lg transition-all flex items-center justify-center gap-2 ${authMode === 'register' ? 'bg-blue-600 text-white shadow' : 'text-slate-400'}`}
+                        className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all flex items-center justify-center gap-2 ${authMode === 'register' ? 'bg-blue-600 text-white shadow-lg shadow-blue-500/25' : 'text-slate-400 hover:text-white'}`}
                     >
-                        <UserPlus size={16} /> สมัครใหม่
+                        <UserPlus size={18} /> สมัครใหม่
                     </button>
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-5">
                     <div>
-                        <label className="text-xs font-medium text-slate-400 ml-1">ชื่อผู้ใช้ (Username)</label>
-                        <input 
-                            type="text" 
-                            value={userProfile.username}
-                            onChange={(e) => setUserProfile({...userProfile, username: e.target.value.toLowerCase().replace(/\s/g, '')})}
-                            className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none mt-1"
-                            placeholder="กรอกชื่อผู้ใช้ภาษาอังกฤษ..."
-                        />
+                        <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider mb-2 block">Username</label>
+                        <div className="relative group">
+                            <input 
+                                type="text" 
+                                value={userProfile.username}
+                                onChange={(e) => setUserProfile({...userProfile, username: e.target.value.toLowerCase().replace(/\s/g, '')})}
+                                className="w-full bg-black/20 border border-white/10 rounded-2xl px-4 py-4 text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all placeholder:text-slate-600 group-hover:border-white/20"
+                                placeholder="ตั้งชื่อผู้ใช้ภาษาอังกฤษ..."
+                            />
+                            <User className="absolute right-4 top-4 text-slate-600" size={20} />
+                        </div>
                     </div>
 
                     {authMode === 'register' && (
-                        <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                        <div className="space-y-5 animate-in fade-in slide-in-from-top-4 duration-500">
                              <div>
-                                <label className="text-xs font-medium text-slate-400 ml-1">ชื่อเล่น / ชื่อที่แสดง</label>
-                                <input 
-                                    type="text" 
-                                    value={userProfile.displayName}
-                                    onChange={(e) => setUserProfile({...userProfile, displayName: e.target.value})}
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-blue-500 outline-none mt-1"
-                                    placeholder="ชื่อเล่นของคุณ..."
-                                />
+                                <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider mb-2 block">Display Name</label>
+                                <div className="relative group">
+                                    <input 
+                                        type="text" 
+                                        value={userProfile.displayName}
+                                        onChange={(e) => setUserProfile({...userProfile, displayName: e.target.value})}
+                                        className="w-full bg-black/20 border border-white/10 rounded-2xl px-4 py-4 text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all placeholder:text-slate-600 group-hover:border-white/20"
+                                        placeholder="ชื่อเล่นของคุณ..."
+                                    />
+                                    <Target className="absolute right-4 top-4 text-slate-600" size={20} />
+                                </div>
                             </div>
 
                             {/* Gender Selection */}
                             <div>
-                                <label className="text-xs font-medium text-slate-400 ml-1">เพศ (สำหรับคำนวณค่าพลังงาน)</label>
-                                <div className="grid grid-cols-2 gap-3 mt-1">
+                                <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider mb-2 block">เพศ</label>
+                                <div className="grid grid-cols-2 gap-3">
                                     <button
                                         onClick={() => setUserProfile({...userProfile, gender: 'male'})}
-                                        className={`py-3 px-4 rounded-xl border flex items-center justify-center gap-2 transition-all ${userProfile.gender === 'male' ? 'bg-blue-600/20 border-blue-500 text-blue-400' : 'bg-slate-950 border-slate-700 text-slate-500 hover:border-slate-600'}`}
+                                        className={`py-3 px-4 rounded-xl border-2 flex items-center justify-center gap-2 transition-all ${userProfile.gender === 'male' ? 'bg-blue-500/20 border-blue-500 text-blue-400' : 'bg-black/20 border-transparent text-slate-500 hover:bg-black/40'}`}
                                     >
-                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${userProfile.gender === 'male' ? 'border-blue-500' : 'border-slate-600'}`}>
-                                            {userProfile.gender === 'male' && <div className="w-2 h-2 rounded-full bg-blue-500" />}
-                                        </div>
+                                        <div className={`w-3 h-3 rounded-full ${userProfile.gender === 'male' ? 'bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' : 'bg-slate-600'}`} />
                                         ชาย
                                     </button>
                                     <button
                                         onClick={() => setUserProfile({...userProfile, gender: 'female'})}
-                                        className={`py-3 px-4 rounded-xl border flex items-center justify-center gap-2 transition-all ${userProfile.gender === 'female' ? 'bg-pink-600/20 border-pink-500 text-pink-400' : 'bg-slate-950 border-slate-700 text-slate-500 hover:border-slate-600'}`}
+                                        className={`py-3 px-4 rounded-xl border-2 flex items-center justify-center gap-2 transition-all ${userProfile.gender === 'female' ? 'bg-pink-500/20 border-pink-500 text-pink-400' : 'bg-black/20 border-transparent text-slate-500 hover:bg-black/40'}`}
                                     >
-                                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${userProfile.gender === 'female' ? 'border-pink-500' : 'border-slate-600'}`}>
-                                            {userProfile.gender === 'female' && <div className="w-2 h-2 rounded-full bg-pink-500" />}
-                                        </div>
+                                        <div className={`w-3 h-3 rounded-full ${userProfile.gender === 'female' ? 'bg-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)]' : 'bg-slate-600'}`} />
                                         หญิง
                                     </button>
                                 </div>
@@ -640,42 +644,47 @@ const App: React.FC = () => {
 
                             <div className="grid grid-cols-3 gap-3">
                                 <div>
-                                    <label className="text-xs font-medium text-slate-400 ml-1">อายุ (ปี)</label>
-                                    <input type="number" value={userProfile.age} onChange={(e) => setUserProfile({...userProfile, age: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1" />
+                                    <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase mb-1 block">อายุ</label>
+                                    <input type="number" value={userProfile.age} onChange={(e) => setUserProfile({...userProfile, age: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-2xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-medium text-slate-400 ml-1">นน. (kg)</label>
-                                    <input type="number" value={userProfile.weight} onChange={(e) => setUserProfile({...userProfile, weight: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1" />
+                                    <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase mb-1 block">นน. (kg)</label>
+                                    <input type="number" value={userProfile.weight} onChange={(e) => setUserProfile({...userProfile, weight: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-2xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none" />
                                 </div>
                                 <div>
-                                    <label className="text-xs font-medium text-slate-400 ml-1">สูง (cm)</label>
-                                    <input type="number" value={userProfile.height} onChange={(e) => setUserProfile({...userProfile, height: e.target.value})} className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none mt-1" />
+                                    <label className="text-[10px] font-bold text-slate-400 ml-1 uppercase mb-1 block">สูง (cm)</label>
+                                    <input type="number" value={userProfile.height} onChange={(e) => setUserProfile({...userProfile, height: e.target.value})} className="w-full bg-black/20 border border-white/10 rounded-2xl px-3 py-3 text-white text-center focus:ring-2 focus:ring-blue-500 outline-none" />
                                 </div>
                             </div>
 
                             <div>
-                                <label className="text-xs font-medium text-slate-400 ml-1">ระดับกิจกรรม</label>
-                                <select 
-                                    value={userProfile.activityLevel}
-                                    onChange={(e) => setUserProfile({...userProfile, activityLevel: e.target.value as ActivityLevel})}
-                                    className="w-full bg-slate-950 border border-slate-700 text-white rounded-xl px-3 py-3 mt-1 outline-none"
-                                >
-                                    <option value="sedentary">ไม่ออกกำลังกาย (Sedentary)</option>
-                                    <option value="light">ออกเล็กน้อย 1-3 วัน/สัปดาห์</option>
-                                    <option value="moderate">ปานกลาง 3-5 วัน/สัปดาห์</option>
-                                    <option value="active">หนัก 6-7 วัน/สัปดาห์</option>
-                                    <option value="very_active">หนักมาก (นักกีฬา)</option>
-                                </select>
+                                <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider mb-2 block">ระดับกิจกรรม</label>
+                                <div className="relative">
+                                    <select 
+                                        value={userProfile.activityLevel}
+                                        onChange={(e) => setUserProfile({...userProfile, activityLevel: e.target.value as ActivityLevel})}
+                                        className="w-full bg-black/20 border border-white/10 text-white rounded-2xl px-4 py-4 appearance-none outline-none focus:ring-2 focus:ring-blue-500"
+                                    >
+                                        <option value="sedentary">ไม่ออกกำลังกาย (Sedentary)</option>
+                                        <option value="light">ออกเล็กน้อย 1-3 วัน/สัปดาห์</option>
+                                        <option value="moderate">ปานกลาง 3-5 วัน/สัปดาห์</option>
+                                        <option value="active">หนัก 6-7 วัน/สัปดาห์</option>
+                                        <option value="very_active">หนักมาก (นักกีฬา)</option>
+                                    </select>
+                                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                        <ArrowRight className="rotate-90 text-slate-500" size={16} />
+                                    </div>
+                                </div>
                             </div>
 
                             <div>
-                                <label className="text-xs font-medium text-slate-400 ml-1 mb-2 flex justify-between items-center">
+                                <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider mb-3 flex justify-between items-center">
                                     <span>รูปโปรไฟล์</span>
                                     <button 
                                         onClick={triggerFileInput} 
-                                        className="text-blue-400 flex items-center gap-1 hover:text-blue-300 transition-colors"
+                                        className="text-blue-400 flex items-center gap-1 hover:text-blue-300 transition-colors text-[10px] bg-blue-500/10 px-2 py-1 rounded-lg"
                                     >
-                                        <Upload size={14} /> อัปโหลดรูปเอง
+                                        <Upload size={12} /> อัปโหลดเอง
                                     </button>
                                 </label>
                                 <input 
@@ -686,25 +695,24 @@ const App: React.FC = () => {
                                     accept="image/*"
                                 />
                                 
-                                {/* Selected/Current Avatar Preview */}
-                                <div className="flex justify-center mb-4">
-                                    <div className="relative w-24 h-24 rounded-full border-4 border-blue-500 overflow-hidden shadow-lg shadow-blue-500/20 bg-slate-800">
-                                        <img src={userProfile.avatarUrl} alt="Selected" className="w-full h-full object-cover" />
+                                <div className="flex justify-center mb-6">
+                                    <div className="relative w-28 h-28 rounded-full border-4 border-blue-500/50 p-1 bg-gradient-to-tr from-blue-500/20 to-purple-500/20">
+                                        <img src={userProfile.avatarUrl} alt="Selected" className="w-full h-full object-cover rounded-full shadow-2xl" />
                                         <button 
                                             onClick={triggerFileInput}
-                                            className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity"
+                                            className="absolute bottom-0 right-0 bg-white text-blue-600 p-2 rounded-full shadow-lg hover:scale-110 transition-transform"
                                         >
-                                            <Camera size={24} className="text-white" />
+                                            <Camera size={18} />
                                         </button>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-5 gap-2">
+                                <div className="grid grid-cols-4 gap-3">
                                     {PRESET_AVATARS.map((url, index) => (
                                         <button
                                             key={index}
                                             onClick={() => setUserProfile({...userProfile, avatarUrl: url})}
-                                            className={`aspect-square rounded-xl overflow-hidden border-2 transition-all ${userProfile.avatarUrl === url ? 'border-blue-500 scale-105 shadow-md shadow-blue-500/20 ring-2 ring-blue-500/30' : 'border-slate-800 opacity-60 hover:opacity-100 hover:border-slate-600'}`}
+                                            className={`aspect-square rounded-2xl overflow-hidden border-2 transition-all duration-300 ${userProfile.avatarUrl === url ? 'border-blue-500 scale-110 shadow-lg shadow-blue-500/30' : 'border-transparent opacity-50 hover:opacity-100 hover:scale-105'}`}
                                         >
                                             <img src={url} alt={`Avatar ${index}`} className="w-full h-full object-cover" />
                                         </button>
@@ -715,7 +723,8 @@ const App: React.FC = () => {
                     )}
 
                     {authError && (
-                        <div className="bg-red-500/10 border border-red-500/50 text-red-400 p-3 rounded-xl text-sm text-center">
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-2xl text-sm text-center flex items-center justify-center gap-2">
+                            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                             {authError}
                         </div>
                     )}
@@ -723,20 +732,21 @@ const App: React.FC = () => {
                     <button 
                         onClick={handleAuth}
                         disabled={authLoading}
-                        className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 rounded-xl shadow-lg shadow-blue-900/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold py-4 rounded-2xl shadow-xl shadow-blue-600/20 transition-all active:scale-95 flex items-center justify-center gap-2 mt-6 disabled:opacity-50 disabled:cursor-not-allowed group relative overflow-hidden"
                     >
+                        <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                         {authLoading ? (
                             <> <Loader2 className="animate-spin" /> กำลังโหลด... </>
                         ) : (
-                            <> {authMode === 'login' ? 'เข้าสู่ระบบ' : 'เริ่มใช้งานทันที'} <ArrowRight size={20} /> </>
+                            <> {authMode === 'login' ? 'เข้าสู่ระบบ' : 'เริ่มใช้งานทันที'} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" /> </>
                         )}
                     </button>
                 </div>
             </div>
             
             {!isSupabaseConfigured && (
-                <p className="text-center text-xs text-yellow-500/80">
-                    ⚠️ ยังไม่ได้เชื่อมต่อ Database (ข้อมูลจะหายเมื่อรีเฟรช)
+                <p className="text-center text-xs text-white/30 font-medium">
+                    ⚠️ Demo Mode (No Database)
                 </p>
             )}
         </div>
@@ -744,43 +754,67 @@ const App: React.FC = () => {
   );
 
   const renderHome = () => {
-    const workoutOptions: { id: string; type: WorkoutType; name: string; routine: Exercise[]; color: string }[] = [
-      { id: 'push', type: 'Push', name: 'Push Day', routine: PUSH_ROUTINE, color: 'from-orange-500 to-red-500' },
-      { id: 'pull', type: 'Pull', name: 'Pull Day', routine: PULL_ROUTINE, color: 'from-blue-500 to-cyan-500' },
-      { id: 'legs', type: 'Legs', name: 'Leg Day', routine: LEGS_ROUTINE, color: 'from-emerald-500 to-green-500' },
-      { id: 'custom', type: 'Custom', name: 'Custom', routine: [], color: 'from-purple-500 to-indigo-500' },
+    const workoutOptions: { id: string; type: WorkoutType; name: string; routine: Exercise[]; color: string, icon: React.ReactNode }[] = [
+      { id: 'push', type: 'Push', name: 'Push Day', routine: PUSH_ROUTINE, color: 'from-orange-500 to-red-600', icon: <Flame className="text-white" /> },
+      { id: 'pull', type: 'Pull', name: 'Pull Day', routine: PULL_ROUTINE, color: 'from-cyan-500 to-blue-600', icon: <Target className="text-white" /> },
+      { id: 'legs', type: 'Legs', name: 'Leg Day', routine: LEGS_ROUTINE, color: 'from-emerald-500 to-green-600', icon: <Trophy className="text-white" /> },
+      { id: 'custom', type: 'Custom', name: 'Custom', routine: [], color: 'from-purple-500 to-fuchsia-600', icon: <Star className="text-white" /> },
     ];
 
     return (
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-2xl p-6 shadow-xl text-white relative overflow-hidden">
-          <div className="relative z-10">
-            <h2 className="text-2xl font-bold mb-2">ยินดีต้อนรับ, {userProfile.displayName}</h2>
-            <p className="opacity-90 italic">"{quote}"</p>
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
+        {/* Welcome Banner */}
+        <div className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 shadow-2xl shadow-indigo-500/30 text-white p-8">
+          <div className="absolute top-0 right-0 p-8 opacity-10 transform translate-x-1/4 -translate-y-1/4">
+             <Dumbbell size={200} />
           </div>
-          <div className="absolute right-0 bottom-0 opacity-10 transform translate-x-4 translate-y-4">
-            <Dumbbell size={120} />
+          <div className="absolute bottom-0 left-0 w-full h-1/2 bg-gradient-to-t from-black/20 to-transparent" />
+          
+          <div className="relative z-10">
+            <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-white/20 backdrop-blur-md rounded-xl">
+                    <Crown size={20} className="text-yellow-300" />
+                </div>
+                <span className="font-bold text-blue-100 tracking-wide uppercase text-sm">Welcome Back</span>
+            </div>
+            <h2 className="text-3xl font-extrabold mb-2 tracking-tight leading-tight">{userProfile.displayName}</h2>
+            <div className="inline-block bg-black/20 backdrop-blur-sm px-4 py-2 rounded-xl mt-2 border border-white/10">
+                <p className="text-sm font-medium italic text-blue-100">"{quote}"</p>
+            </div>
           </div>
         </div>
 
         <div>
-          <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-            <Play size={20} className="text-blue-500" />
-            เริ่มออกกำลังกาย
+          <h3 className="text-xl font-bold text-white mb-5 flex items-center gap-3">
+            <div className="w-1 h-6 rounded-full bg-blue-500"></div>
+            เลือกโปรแกรมฝึก
           </h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             {workoutOptions.map((item) => (
               <button
                 key={item.id}
                 onClick={() => startWorkout(item.type, item.routine)}
-                className="relative group overflow-hidden rounded-xl h-28 text-left transition-all hover:scale-[1.02]"
+                className="relative group overflow-hidden rounded-3xl h-28 text-left transition-all hover:scale-[1.02] shadow-lg hover:shadow-xl"
               >
-                <div className={`absolute inset-0 bg-gradient-to-br ${item.color} opacity-90 group-hover:opacity-100 transition-opacity`} />
-                <div className="absolute inset-0 p-4 flex flex-col justify-between z-10">
-                  <span className="text-xl font-bold text-white">{item.name}</span>
-                  <span className="text-white/80 text-xs flex items-center gap-1">
-                    เริ่มเลย <ChevronLeft className="rotate-180" size={14} />
-                  </span>
+                {/* Background Gradient */}
+                <div className={`absolute inset-0 bg-gradient-to-r ${item.color} opacity-90 transition-opacity`} />
+                
+                {/* Decorative Circles */}
+                <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
+                
+                <div className="absolute inset-0 p-6 flex items-center justify-between z-10">
+                  <div className="flex items-center gap-4">
+                      <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner border border-white/20 group-hover:rotate-12 transition-transform duration-300">
+                          {item.icon}
+                      </div>
+                      <div>
+                          <span className="text-2xl font-bold text-white tracking-tight block">{item.name}</span>
+                          <span className="text-white/70 text-xs font-medium uppercase tracking-widest">Start Workout</span>
+                      </div>
+                  </div>
+                  <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center group-hover:bg-white group-hover:text-blue-600 transition-colors">
+                      <Play size={20} className="fill-current" />
+                  </div>
                 </div>
               </button>
             ))}
@@ -793,69 +827,84 @@ const App: React.FC = () => {
   const renderWorkout = () => {
     if (!currentSession) return null;
     
-    // Suggestion logic: Get unique exercises from history not in current session
+    // Suggestion logic
     const uniqueHistoryExercises = Array.from(new Set(
         history.flatMap(s => s.exercises.map(e => e.name))
     )).filter(name => !currentSession?.exercises.some(e => e.name === name)).sort();
 
+    const themeGradient = 
+       currentSession.type === 'Push' ? 'from-orange-500 to-red-600' :
+       currentSession.type === 'Pull' ? 'from-cyan-500 to-blue-600' :
+       currentSession.type === 'Legs' ? 'from-emerald-500 to-green-600' :
+       'from-purple-500 to-fuchsia-600';
+
     return (
-      <div className="space-y-4 pb-20">
-        <div className="flex justify-between items-center mb-6">
+      <div className="space-y-6 pb-28 animate-in fade-in slide-in-from-bottom-8 duration-500">
+        {/* Header Bar */}
+        <div className="flex justify-between items-center mb-2">
             <button 
                 onClick={endWorkout}
-                className="text-slate-400 hover:text-white flex items-center gap-1 text-sm font-medium"
+                className="bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-bold transition-colors border border-white/5"
             >
-                <ChevronLeft size={20} /> กลับหน้าหลัก
+                <ChevronLeft size={18} /> ออก
             </button>
-          <button 
-            onClick={saveWorkout}
-            className="bg-blue-600 hover:bg-blue-500 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg shadow-blue-900/20 active:scale-95 transition-all"
-          >
-            บันทึกการฝึก
-          </button>
+            <div className={`px-4 py-1.5 rounded-full bg-gradient-to-r ${themeGradient} text-white text-xs font-bold shadow-lg shadow-black/20 uppercase tracking-wider`}>
+                {currentSession.type} SESSION
+            </div>
+            <button 
+                onClick={saveWorkout}
+                className="bg-white text-blue-900 hover:bg-blue-50 px-5 py-2 rounded-xl text-sm font-black shadow-lg shadow-blue-500/20 active:scale-95 transition-all flex items-center gap-2"
+            >
+                บันทึก <Check size={16} />
+            </button>
         </div>
 
-        <div className="flex items-center gap-3 mb-6">
-           <div className={`p-3 rounded-xl bg-gradient-to-br ${
-               currentSession.type === 'Push' ? 'from-orange-500 to-red-500' :
-               currentSession.type === 'Pull' ? 'from-blue-500 to-cyan-500' :
-               currentSession.type === 'Legs' ? 'from-emerald-500 to-green-500' :
-               'from-purple-500 to-indigo-500'
-           }`}>
-               <Dumbbell className="text-white" size={24} />
-           </div>
-           <div>
-               <h2 className="text-2xl font-bold text-white">{currentSession.title}</h2>
-               <p className="text-slate-400 text-sm">{new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long' })}</p>
+        {/* Title Card */}
+        <div className="bg-slate-900/60 backdrop-blur-md p-6 rounded-3xl border border-white/10 shadow-xl">
+           <div className="flex items-center gap-4">
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${themeGradient} flex items-center justify-center shadow-lg`}>
+                   <Dumbbell className="text-white" size={28} />
+                </div>
+               <div>
+                   <h2 className="text-2xl font-extrabold text-white tracking-tight">{currentSession.title}</h2>
+                   <p className="text-slate-400 text-sm font-medium flex items-center gap-2 mt-1">
+                       <Calendar size={14} />
+                       {new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long' })}
+                   </p>
+               </div>
            </div>
         </div>
         
-        {/* Exercise Suggestions Dropdown */}
+        {/* Suggestion Box */}
         {uniqueHistoryExercises.length > 0 && (
-            <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700 mb-6">
-                <label className="text-xs text-slate-400 mb-2 block">เพิ่มท่าจากประวัติการเล่นของคุณ</label>
-                <div className="flex gap-2">
-                    <select
-                        value={selectedSuggestion}
-                        onChange={(e) => setSelectedSuggestion(e.target.value)}
-                        className="flex-1 bg-slate-800 text-white border border-slate-600 rounded-lg px-3 py-2 text-sm outline-none"
-                    >
-                        <option value="">-- เลือกท่าออกกำลังกาย --</option>
-                        {uniqueHistoryExercises.map((name, idx) => (
-                            <option key={idx} value={name}>{name}</option>
-                        ))}
-                    </select>
-                    <button
-                        onClick={() => addSuggestion(selectedSuggestion)}
-                        disabled={!selectedSuggestion}
-                        className="bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-2 rounded-lg"
-                    >
-                        <Plus size={20} />
-                    </button>
+            <div className="bg-blue-900/20 p-4 rounded-2xl border border-blue-500/30 flex gap-3 items-center">
+                <div className="flex-1">
+                    <label className="text-[10px] text-blue-300 font-bold uppercase tracking-wider mb-1 block">Quick Add</label>
+                    <div className="relative">
+                        <select
+                            value={selectedSuggestion}
+                            onChange={(e) => setSelectedSuggestion(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 text-white rounded-xl px-3 py-2 text-sm outline-none focus:border-blue-500 appearance-none"
+                        >
+                            <option value="">-- เลือกท่าจากประวัติ --</option>
+                            {uniqueHistoryExercises.map((name, idx) => (
+                                <option key={idx} value={name}>{name}</option>
+                            ))}
+                        </select>
+                        <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 rotate-90 text-slate-500 pointer-events-none" size={14} />
+                    </div>
                 </div>
+                <button
+                    onClick={() => addSuggestion(selectedSuggestion)}
+                    disabled={!selectedSuggestion}
+                    className="h-10 w-10 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/50"
+                >
+                    <Plus size={20} />
+                </button>
             </div>
         )}
 
+        {/* Exercise List */}
         <div className="space-y-4">
           {currentSession.exercises.map((exercise) => (
             <ExerciseCard
@@ -872,9 +921,12 @@ const App: React.FC = () => {
 
         <button 
             onClick={addNewExercise}
-            className="w-full py-4 bg-slate-800/50 border-2 border-dashed border-slate-700 hover:border-blue-500/50 hover:bg-slate-800 text-slate-400 hover:text-blue-400 rounded-xl transition-all flex items-center justify-center gap-2 font-medium"
+            className="w-full py-5 bg-slate-900/50 border-2 border-dashed border-slate-700 hover:border-blue-500 hover:bg-blue-500/10 text-slate-400 hover:text-blue-400 rounded-3xl transition-all flex items-center justify-center gap-2 font-bold group"
         >
-            <Plus size={20} /> เพิ่มท่าออกกำลังกายเอง
+            <div className="bg-slate-800 group-hover:bg-blue-500 p-1 rounded-full text-white transition-colors">
+                <Plus size={16} />
+            </div>
+            เพิ่มท่าออกกำลังกายใหม่
         </button>
       </div>
     );
@@ -884,78 +936,87 @@ const App: React.FC = () => {
       if (!viewingSession) return null;
 
       const duration = formatDuration(viewingSession.startTime, viewingSession.endTime);
-      
-      // Filter exercises that were actually performed (at least one completed set)
       const performedExercises = viewingSession.exercises.filter(ex => 
         ex.sets.some(s => s.completed)
       );
+      
+      const themeColor = 
+           viewingSession.type === 'Push' ? 'orange' : 
+           viewingSession.type === 'Pull' ? 'blue' : 
+           viewingSession.type === 'Legs' ? 'emerald' : 
+           'purple';
 
       return (
-          <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-right-4 duration-300">
-              <div className="flex items-center gap-2 mb-4">
+          <div className="space-y-6 pb-24 animate-in fade-in slide-in-from-right-8 duration-300">
+              <div className="flex items-center gap-3 mb-2">
                   <button 
                     onClick={() => setViewingSession(null)}
-                    className="p-2 bg-slate-800 rounded-lg text-slate-300 hover:text-white"
+                    className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center text-white hover:bg-white/20 backdrop-blur-md"
                   >
                       <ChevronLeft size={20} />
                   </button>
                   <h2 className="text-xl font-bold text-white">รายละเอียดการฝึก</h2>
               </div>
 
-              <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 shadow-lg">
-                  <div className="flex justify-between items-start mb-6">
-                      <div>
-                          <h3 className="text-2xl font-bold text-white mb-1">{viewingSession.title}</h3>
-                          <div className="flex items-center gap-2 text-slate-400 text-sm">
-                              <Calendar size={14} />
-                              {new Date(viewingSession.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              <div className={`bg-gradient-to-br from-${themeColor}-900/50 to-slate-900 rounded-[2rem] p-6 border border-${themeColor}-500/30 shadow-xl overflow-hidden relative`}>
+                  <div className={`absolute top-0 right-0 w-32 h-32 bg-${themeColor}-500/20 blur-[50px] rounded-full`}></div>
+                  
+                  <div className="relative z-10">
+                      <div className="flex justify-between items-start mb-6">
+                          <div>
+                              <h3 className="text-2xl font-extrabold text-white mb-1 leading-tight">{viewingSession.title}</h3>
+                              <div className="flex items-center gap-2 text-${themeColor}-300 text-sm font-medium">
+                                  <Calendar size={14} />
+                                  {new Date(viewingSession.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </div>
+                          </div>
+                          <div className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wider bg-${themeColor}-500 text-white shadow-lg shadow-${themeColor}-500/40`}>
+                              {viewingSession.type}
                           </div>
                       </div>
-                      <div className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                          viewingSession.type === 'Push' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
-                          viewingSession.type === 'Pull' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-                          viewingSession.type === 'Legs' ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' :
-                          'bg-purple-500/20 text-purple-400 border-purple-500/30'
-                      }`}>
-                          {viewingSession.type}
-                      </div>
-                  </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
-                          <div className="flex items-center gap-2 text-slate-400 mb-1 text-xs uppercase font-bold tracking-wider">
-                              <Clock size={14} /> ระยะเวลา
+                      <div className="grid grid-cols-2 gap-3">
+                          <div className="bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-sm">
+                              <div className="flex items-center gap-2 text-slate-400 mb-2 text-[10px] uppercase font-bold tracking-widest">
+                                  <Clock size={12} /> ระยะเวลา
+                              </div>
+                              <div className="text-xl font-bold text-white">{duration}</div>
                           </div>
-                          <div className="text-xl font-bold text-white">{duration}</div>
-                      </div>
-                      <div className="bg-slate-900/50 p-4 rounded-xl border border-slate-700/50">
-                          <div className="flex items-center gap-2 text-slate-400 mb-1 text-xs uppercase font-bold tracking-wider">
-                              <Target size={14} /> ท่าที่เล่น
+                          <div className="bg-black/20 p-4 rounded-2xl border border-white/5 backdrop-blur-sm">
+                              <div className="flex items-center gap-2 text-slate-400 mb-2 text-[10px] uppercase font-bold tracking-widest">
+                                  <Dumbbell size={12} /> ท่าที่เล่น
+                              </div>
+                              <div className="text-xl font-bold text-white">{performedExercises.length} ท่า</div>
                           </div>
-                          <div className="text-xl font-bold text-white">{performedExercises.length} ท่า</div>
                       </div>
                   </div>
               </div>
 
               <div className="space-y-4">
-                  <h3 className="text-lg font-bold text-white px-1">รายการท่าออกกำลังกาย</h3>
+                  <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                      <div className="w-1 h-5 bg-white rounded-full"></div>
+                      Timeline การฝึก
+                  </h3>
                   {performedExercises.length === 0 ? (
-                      <div className="text-center p-8 text-slate-500 bg-slate-900/30 rounded-xl border border-slate-800">
+                      <div className="text-center p-8 text-slate-500 bg-slate-900/30 rounded-2xl border border-slate-800 border-dashed">
                           ไม่มีข้อมูลท่าที่เล่นจบในวันนั้น
                       </div>
                   ) : (
                       performedExercises.map((ex, i) => (
-                          <div key={i} className="bg-slate-800 rounded-xl p-4 border border-slate-700">
-                              <div className="flex justify-between items-center mb-3">
-                                  <h4 className="font-bold text-white">{ex.name}</h4>
+                          <div key={i} className="bg-slate-800/40 rounded-2xl p-5 border border-white/5 relative overflow-hidden">
+                              <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-transparent via-slate-500 to-transparent opacity-30"></div>
+                              <div className="flex justify-between items-center mb-4 pl-3">
+                                  <h4 className="font-bold text-white text-lg">{ex.name}</h4>
                               </div>
-                              <div className="space-y-2">
+                              <div className="grid grid-cols-3 gap-2 pl-3">
                                   {ex.sets.filter(s => s.completed).map((s, idx) => (
-                                      <div key={idx} className="flex justify-between items-center text-sm p-2 bg-slate-900/50 rounded-lg border border-slate-700/50">
-                                          <span className="text-slate-400 w-8">#{s.setNumber}</span>
-                                          <span className="font-bold text-white">{s.weight} kg</span>
-                                          <span className="text-slate-400">×</span>
-                                          <span className="font-bold text-white">{s.reps} ครั้ง</span>
+                                      <div key={idx} className="flex flex-col items-center justify-center p-2 bg-black/20 rounded-xl border border-white/5">
+                                          <span className="text-[10px] text-slate-500 font-bold mb-1">SET {s.setNumber}</span>
+                                          <span className="font-extrabold text-white text-sm">
+                                              {s.weight}<span className="text-[10px] font-normal text-slate-400 ml-0.5">kg</span> 
+                                              <span className="mx-1 text-slate-600">/</span> 
+                                              {s.reps}
+                                          </span>
                                       </div>
                                   ))}
                               </div>
@@ -968,7 +1029,7 @@ const App: React.FC = () => {
   };
 
   const renderHistory = () => {
-    // Filter Logic
+    // Filter Logic (Same as before)
     const now = new Date();
     let filteredHistory = history;
 
@@ -983,7 +1044,6 @@ const App: React.FC = () => {
         filteredHistory = history.filter(s => new Date(s.date) >= oneYearAgo);
     }
 
-    // Stats Calculation based on filtered data
     const totalSessions = filteredHistory.length;
     const totalDuration = filteredHistory.reduce((acc, s) => {
         if (!s.startTime || !s.endTime) return acc;
@@ -998,109 +1058,114 @@ const App: React.FC = () => {
     const customCount = filteredHistory.filter(s => s.type === 'Custom').length;
 
     return (
-      <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="space-y-8 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between">
-             <h2 className="text-2xl font-bold text-white">ภาพรวมการฝึก</h2>
-             {/* Simple Filter UI */}
-             <div className="flex bg-slate-800 p-1 rounded-lg">
+             <h2 className="text-2xl font-extrabold text-white tracking-tight">Summary</h2>
+             <div className="flex bg-slate-900/80 p-1.5 rounded-xl border border-white/5">
                  {(['all', 'week', 'month', 'year'] as const).map(f => (
                      <button
                         key={f}
                         onClick={() => setHistoryFilter(f)}
-                        className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${historyFilter === f ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                        className={`px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${historyFilter === f ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-400 hover:text-white'}`}
                      >
-                         {f === 'all' ? 'ทั้งหมด' : f === 'week' ? '7 วัน' : f === 'month' ? '30 วัน' : '1 ปี'}
+                         {f === 'all' ? 'All' : f === 'week' ? 'Week' : f === 'month' ? 'Month' : 'Year'}
                      </button>
                  ))}
              </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Stats Cards - Glassmorphism */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-gradient-to-br from-blue-900/40 to-slate-900 border border-blue-500/20 p-5 rounded-2xl relative overflow-hidden">
-             <div className="absolute right-0 top-0 p-3 opacity-10"><Calendar size={60} /></div>
-             <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">จำนวนวันฝึก</p>
-             <h3 className="text-3xl font-bold text-white">{totalSessions} <span className="text-sm font-normal text-slate-500">ครั้ง</span></h3>
+          <div className="bg-gradient-to-br from-blue-900/30 to-slate-900/80 backdrop-blur-md border border-blue-500/20 p-6 rounded-3xl relative overflow-hidden group">
+             <div className="absolute -right-4 -top-4 w-24 h-24 bg-blue-500/20 rounded-full blur-xl group-hover:bg-blue-500/30 transition-colors"></div>
+             <Calendar className="text-blue-400 mb-2 relative z-10" size={24} />
+             <p className="text-blue-200/60 text-[10px] font-bold uppercase tracking-widest mb-1 relative z-10">Total Workouts</p>
+             <h3 className="text-4xl font-extrabold text-white relative z-10">{totalSessions}</h3>
           </div>
-          <div className="bg-gradient-to-br from-purple-900/40 to-slate-900 border border-purple-500/20 p-5 rounded-2xl relative overflow-hidden">
-             <div className="absolute right-0 top-0 p-3 opacity-10"><Clock size={60} /></div>
-             <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-1">เวลาฝึกรวม</p>
-             <h3 className="text-3xl font-bold text-white">{totalHours} <span className="text-sm font-normal text-slate-500">ชม.</span></h3>
+          <div className="bg-gradient-to-br from-purple-900/30 to-slate-900/80 backdrop-blur-md border border-purple-500/20 p-6 rounded-3xl relative overflow-hidden group">
+             <div className="absolute -right-4 -top-4 w-24 h-24 bg-purple-500/20 rounded-full blur-xl group-hover:bg-purple-500/30 transition-colors"></div>
+             <Clock className="text-purple-400 mb-2 relative z-10" size={24} />
+             <p className="text-purple-200/60 text-[10px] font-bold uppercase tracking-widest mb-1 relative z-10">Total Hours</p>
+             <h3 className="text-4xl font-extrabold text-white relative z-10">{totalHours}</h3>
           </div>
         </div>
 
         {/* Distribution Bar */}
-        <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
-            <h4 className="text-sm font-bold text-slate-300 mb-3">สัดส่วนการฝึก (Distribution)</h4>
-            <div className="flex h-4 rounded-full overflow-hidden bg-slate-900">
-                <div style={{ width: `${(pushCount/totalSessions)*100}%` }} className="bg-orange-500 h-full" />
-                <div style={{ width: `${(pullCount/totalSessions)*100}%` }} className="bg-blue-500 h-full" />
-                <div style={{ width: `${(legsCount/totalSessions)*100}%` }} className="bg-emerald-500 h-full" />
-                <div style={{ width: `${(customCount/totalSessions)*100}%` }} className="bg-purple-500 h-full" />
+        <div className="bg-slate-900/50 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
+            <h4 className="text-xs font-bold text-slate-300 mb-4 uppercase tracking-wider flex justify-between">
+                Type Distribution
+                <span className="text-slate-500 font-normal normal-case">Based on filter</span>
+            </h4>
+            <div className="flex h-3 rounded-full overflow-hidden bg-black/40 mb-4">
+                <div style={{ width: `${(pushCount/totalSessions)*100}%` }} className="bg-gradient-to-r from-orange-500 to-red-500 h-full" />
+                <div style={{ width: `${(pullCount/totalSessions)*100}%` }} className="bg-gradient-to-r from-cyan-500 to-blue-500 h-full" />
+                <div style={{ width: `${(legsCount/totalSessions)*100}%` }} className="bg-gradient-to-r from-emerald-500 to-green-500 h-full" />
+                <div style={{ width: `${(customCount/totalSessions)*100}%` }} className="bg-gradient-to-r from-purple-500 to-fuchsia-500 h-full" />
             </div>
-            <div className="flex justify-between mt-2 text-xs text-slate-400">
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-orange-500"/> Push</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-blue-500"/> Pull</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-emerald-500"/> Legs</div>
-                <div className="flex items-center gap-1"><div className="w-2 h-2 rounded-full bg-purple-500"/> Custom</div>
+            <div className="grid grid-cols-4 gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">
+                <div className="bg-orange-900/20 p-2 rounded-lg border border-orange-500/20 text-orange-400">Push</div>
+                <div className="bg-blue-900/20 p-2 rounded-lg border border-blue-500/20 text-blue-400">Pull</div>
+                <div className="bg-emerald-900/20 p-2 rounded-lg border border-emerald-500/20 text-emerald-400">Legs</div>
+                <div className="bg-purple-900/20 p-2 rounded-lg border border-purple-500/20 text-purple-400">Custom</div>
             </div>
         </div>
 
-        <div className="space-y-3">
-          <h3 className="text-lg font-bold text-white mb-2">ประวัติล่าสุด</h3>
+        <div className="space-y-4">
+          <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+              <List size={18} className="text-slate-400" />
+              History Log
+          </h3>
           {loadingHistory ? (
-              <div className="flex justify-center py-8"><Loader2 className="animate-spin text-blue-500" /></div>
+              <div className="flex justify-center py-12"><Loader2 className="animate-spin text-blue-500" size={32} /></div>
           ) : filteredHistory.length === 0 ? (
-            <div className="text-center py-10 bg-slate-900/50 rounded-2xl border border-slate-800 border-dashed">
-              <p className="text-slate-500">ไม่พบประวัติการฝึกซ้อมในช่วงนี้</p>
+            <div className="text-center py-12 bg-slate-900/30 rounded-3xl border border-slate-800 border-dashed">
+              <p className="text-slate-500 font-medium">ไม่พบประวัติการฝึกซ้อม</p>
             </div>
           ) : (
             filteredHistory.map((session) => {
-              const activeExerciseCount = session.exercises.filter(ex => ex.sets.some(s => s.completed)).length;
               const themeColor = session.type === 'Push' ? 'orange' : session.type === 'Pull' ? 'blue' : session.type === 'Legs' ? 'emerald' : 'purple';
+              const gradient = session.type === 'Push' ? 'from-orange-500 to-red-500' : session.type === 'Pull' ? 'from-cyan-500 to-blue-500' : session.type === 'Legs' ? 'from-emerald-500 to-green-500' : 'from-purple-500 to-fuchsia-500';
               
               return (
               <div 
                 key={session.id} 
-                className="group relative bg-slate-800/80 hover:bg-slate-800 p-3 rounded-2xl border border-slate-700/50 hover:border-blue-500/30 transition-all cursor-pointer"
+                className="group relative bg-slate-900/60 backdrop-blur-md hover:bg-slate-800/80 rounded-2xl border border-white/5 hover:border-white/20 transition-all cursor-pointer overflow-hidden shadow-sm hover:shadow-lg hover:-translate-y-1"
                 onClick={() => setViewingSession(session)}
               >
-                  <div className="flex justify-between items-center">
-                     <div className="flex items-center gap-3">
-                         {/* Icon Box */}
-                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br from-${themeColor}-500/20 to-slate-800 text-${themeColor}-400 border border-${themeColor}-500/20`}>
-                             <Dumbbell size={18} />
-                         </div>
-                         
-                         <div>
-                             <h4 className="font-bold text-white text-sm">{session.title}</h4>
-                             <p className="text-[10px] text-slate-400 flex items-center gap-1">
+                  {/* Left Color Bar */}
+                  <div className={`absolute left-0 top-0 bottom-0 w-1.5 bg-gradient-to-b ${gradient}`}></div>
+
+                  <div className="p-4 pl-6">
+                      <div className="flex justify-between items-start mb-2">
+                          <div>
+                              <div className="flex items-center gap-2 mb-1">
+                                  <h4 className="font-bold text-white text-base">{session.title}</h4>
+                                  <span className={`text-[10px] font-black px-2 py-0.5 rounded uppercase tracking-wider bg-${themeColor}-500/10 text-${themeColor}-400 border border-${themeColor}-500/20`}>
+                                      {session.type}
+                                  </span>
+                              </div>
+                              <p className="text-xs text-slate-500 font-medium flex items-center gap-2">
+                                 <Calendar size={12} />
                                  {new Date(session.date).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' })}
-                             </p>
-                         </div>
-                     </div>
+                              </p>
+                          </div>
+                          
+                          <div className="text-right">
+                              <p className="text-white font-bold text-sm">{formatDuration(session.startTime, session.endTime)}</p>
+                          </div>
+                      </div>
 
-                     <div className="flex flex-col items-end gap-1">
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border bg-${themeColor}-500/10 text-${themeColor}-400 border-${themeColor}-500/20`}>
-                            {session.type}
-                        </span>
-                        <div className="flex items-center gap-3 text-xs text-slate-500">
-                             <span className="flex items-center gap-1"><Clock size={10} /> {formatDuration(session.startTime, session.endTime)}</span>
-                             <span className="flex items-center gap-1"><List size={10} /> {activeExerciseCount} ท่า</span>
-                        </div>
-                     </div>
+                      {/* Delete Button (Visible on Hover/Touch) */}
+                      <button 
+                          onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteHistory(session.id);
+                          }}
+                          className="absolute bottom-4 right-4 p-2 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                      >
+                          <Trash2 size={16} />
+                      </button>
                   </div>
-
-                  {/* Delete Button (Visible on Hover/Touch) */}
-                  <button 
-                      onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteHistory(session.id);
-                      }}
-                      className="absolute top-2 right-2 p-1.5 text-slate-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all opacity-0 group-hover:opacity-100"
-                  >
-                      <Trash2 size={14} />
-                  </button>
               </div>
             )})
           )}
@@ -1112,6 +1177,8 @@ const App: React.FC = () => {
   const renderChallenges = () => {
     const streak = calculateStreak();
     
+    // ... (Achievements array remains same, simplified here for brevity in logic, visual update below) ...
+    // Note: Re-declaring achievements locally for the render function
     const achievements: Achievement[] = [
         {
             id: 'streak-3',
@@ -1123,6 +1190,7 @@ const App: React.FC = () => {
             condition: (_, s) => s >= 3,
             progress: (_, s) => Math.min((s/3)*100, 100)
         },
+        // ... (Include other achievements from previous code, just updating UI)
         {
             id: 'streak-7',
             title: 'สัปดาห์มหาโหด',
@@ -1176,37 +1244,42 @@ const App: React.FC = () => {
     ];
 
     const getIcon = (name: string, isUnlocked: boolean) => {
-        const className = isUnlocked ? "" : "opacity-30";
+        const className = isUnlocked ? "" : "opacity-30 grayscale";
         switch(name) {
-            case 'flame': return <Flame className={className} />;
-            case 'crown': return <Crown className={className} />;
-            case 'star': return <Star className={className} />;
-            case 'medal': return <Medal className={className} />;
-            case 'trophy': return <Trophy className={className} />;
-            default: return <Award className={className} />;
+            case 'flame': return <Flame className={className} size={24} />;
+            case 'crown': return <Crown className={className} size={24} />;
+            case 'star': return <Star className={className} size={24} />;
+            case 'medal': return <Medal className={className} size={24} />;
+            case 'trophy': return <Trophy className={className} size={24} />;
+            default: return <Award className={className} size={24} />;
         }
     };
 
     return (
-        <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="space-y-8 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
              {/* Streak Card */}
-             <div className="bg-gradient-to-r from-orange-500 to-red-600 rounded-2xl p-6 shadow-xl relative overflow-hidden text-white">
+             <div className="bg-gradient-to-br from-orange-600 via-red-600 to-rose-700 rounded-[2rem] p-8 shadow-2xl shadow-orange-900/50 relative overflow-hidden text-white text-center">
+                <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10 mix-blend-overlay"></div>
+                <div className="absolute -top-10 -right-10 w-40 h-40 bg-yellow-400/30 rounded-full blur-[60px]"></div>
+                
                 <div className="relative z-10 flex flex-col items-center">
-                    <div className="bg-white/20 p-4 rounded-full mb-3 backdrop-blur-sm shadow-inner">
-                        <Flame size={48} className="text-white drop-shadow-lg animate-pulse" />
+                    <div className="bg-white/10 p-5 rounded-full mb-4 backdrop-blur-md border border-white/20 shadow-inner">
+                        <Flame size={56} className="text-yellow-300 drop-shadow-[0_0_15px_rgba(253,224,71,0.6)] animate-pulse" />
                     </div>
-                    <h2 className="text-5xl font-black mb-1 drop-shadow-md">{streak}</h2>
-                    <p className="text-lg font-bold opacity-90">วันต่อเนื่อง (Day Streak)</p>
-                    <p className="text-sm opacity-75 mt-2">อย่าหยุด! ทำต่อเนื่องเพื่อรับรางวัล</p>
+                    <h2 className="text-6xl font-extrabold mb-1 drop-shadow-xl">{streak}</h2>
+                    <p className="text-xl font-bold text-orange-100 uppercase tracking-widest">Day Streak</p>
+                    <div className="mt-4 bg-black/20 px-4 py-2 rounded-xl backdrop-blur-sm">
+                        <p className="text-sm font-medium text-white/90">Keep the fire burning! 🔥</p>
+                    </div>
                 </div>
-                {/* Background Decor */}
-                <div className="absolute top-0 left-0 w-full h-full opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
              </div>
 
              <div className="space-y-4">
-                 <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                     <Trophy size={20} className="text-yellow-500" />
-                     ภารกิจ & เหรียญรางวัล
+                 <h3 className="text-xl font-extrabold text-white flex items-center gap-3">
+                     <div className="w-10 h-10 rounded-xl bg-yellow-500/20 flex items-center justify-center text-yellow-400">
+                        <Trophy size={20} />
+                     </div>
+                     Achievements
                  </h3>
                  
                  <div className="grid grid-cols-1 gap-4">
@@ -1215,38 +1288,44 @@ const App: React.FC = () => {
                          const progress = ach.progress(history, streak);
                          
                          return (
-                             <div key={ach.id} className={`relative overflow-hidden rounded-xl p-4 border transition-all ${isUnlocked ? 'bg-slate-800 border-blue-500/30 shadow-lg shadow-blue-900/10' : 'bg-slate-900/50 border-slate-800 opacity-80'}`}>
-                                 <div className="flex items-start gap-4">
-                                     <div className={`p-3 rounded-xl flex-shrink-0 ${isUnlocked ? `bg-gradient-to-br from-slate-700 to-slate-800 border border-slate-600 shadow-inner ${ach.color}` : 'bg-slate-800 text-slate-600'}`}>
+                             <div key={ach.id} className={`relative overflow-hidden rounded-3xl p-1 transition-all ${isUnlocked ? 'bg-gradient-to-r from-blue-500/50 to-purple-500/50 p-[1px]' : 'bg-slate-800'}`}>
+                                 <div className={`relative h-full rounded-[23px] p-5 flex items-start gap-4 ${isUnlocked ? 'bg-slate-900/90' : 'bg-slate-900'}`}>
+                                     
+                                     {/* Icon */}
+                                     <div className={`p-4 rounded-2xl flex-shrink-0 shadow-lg ${isUnlocked ? `bg-gradient-to-br from-slate-800 to-black border border-white/10 ${ach.color}` : 'bg-slate-800 text-slate-600 border border-white/5'}`}>
                                          {getIcon(ach.icon, isUnlocked)}
                                      </div>
-                                     <div className="flex-1">
+
+                                     <div className="flex-1 min-w-0">
                                          <div className="flex justify-between items-start mb-1">
-                                             <h4 className={`font-bold text-lg ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>{ach.title}</h4>
-                                             {isUnlocked ? (
-                                                 <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-1 rounded-full font-bold border border-emerald-500/30 flex items-center gap-1">
-                                                     <Check size={10} /> สำเร็จ
-                                                 </span>
-                                             ) : (
-                                                 <span className="bg-slate-800 text-slate-500 text-[10px] px-2 py-1 rounded-full font-bold flex items-center gap-1">
-                                                     <Lock size={10} /> ล็อค
+                                             <h4 className={`font-bold text-lg truncate pr-2 ${isUnlocked ? 'text-white' : 'text-slate-500'}`}>{ach.title}</h4>
+                                             {isUnlocked && (
+                                                 <span className="bg-emerald-500/20 text-emerald-400 text-[10px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider border border-emerald-500/30">
+                                                     Unlocked
                                                  </span>
                                              )}
                                          </div>
-                                         <p className="text-sm text-slate-400 mb-3">{ach.description}</p>
+                                         <p className="text-xs text-slate-400 mb-4 line-clamp-2">{ach.description}</p>
                                          
-                                         {/* Progress Bar */}
-                                         <div className="relative pt-1">
-                                            <div className="flex mb-1 items-center justify-between">
-                                                <span className="text-[10px] font-semibold inline-block text-slate-500">
-                                                    ความคืบหน้า
+                                         {/* Modern Progress Bar */}
+                                         <div className="relative">
+                                            <div className="flex mb-1.5 items-center justify-between">
+                                                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                                                    Progress
                                                 </span>
-                                                <span className="text-[10px] font-semibold inline-block text-slate-400">
+                                                <span className={`text-[10px] font-bold ${isUnlocked ? 'text-blue-400' : 'text-slate-600'}`}>
                                                     {Math.round(progress)}%
                                                 </span>
                                             </div>
-                                            <div className="overflow-hidden h-2 mb-1 text-xs flex rounded bg-slate-700">
-                                                <div style={{ width: `${progress}%` }} className={`shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center ${isUnlocked ? 'bg-gradient-to-r from-blue-500 to-emerald-400' : 'bg-slate-600'}`}></div>
+                                            <div className="h-2 w-full bg-black/40 rounded-full overflow-hidden">
+                                                <div 
+                                                    style={{ width: `${progress}%` }} 
+                                                    className={`h-full rounded-full transition-all duration-1000 ${
+                                                        isUnlocked 
+                                                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]' 
+                                                        : 'bg-slate-700'
+                                                    }`}
+                                                />
                                             </div>
                                          </div>
                                      </div>
@@ -1261,7 +1340,7 @@ const App: React.FC = () => {
   };
 
   const renderProfile = () => {
-    // Mifflin-St Jeor Equation
+    // Calculation Logic (Same as before)
     let bmr = 0;
     const w = parseFloat(userProfile.weight) || 0;
     const h = parseFloat(userProfile.height) || 0;
@@ -1285,7 +1364,6 @@ const App: React.FC = () => {
     };
     tdee = bmr * (activityMultipliers[userProfile.activityLevel] || 1.2);
 
-    // BMI Calculation
     let bmi = 0;
     let bmiCategory = '';
     let bmiColor = '';
@@ -1302,88 +1380,95 @@ const App: React.FC = () => {
     }
 
     return (
-      <div className="space-y-6 pb-20 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 relative overflow-hidden text-center">
-            <div className="relative inline-block mb-4">
-                 <div className="w-28 h-28 rounded-full border-4 border-blue-500 overflow-hidden shadow-xl mx-auto bg-slate-900">
-                    <img src={userProfile.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
-                 </div>
-                 <button 
-                    onClick={triggerFileInput}
-                    className="absolute bottom-0 right-0 bg-slate-800 p-2 rounded-full border border-slate-600 hover:bg-slate-700 text-white shadow-lg transition-colors"
-                 >
-                    <Camera size={16} />
-                 </button>
-                 <input 
-                    type="file" 
-                    ref={fileInputRef}
-                    onChange={handleAvatarUpload}
-                    className="hidden" 
-                    accept="image/*"
-                />
-            </div>
+      <div className="space-y-6 pb-24 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="bg-slate-900/60 backdrop-blur-xl rounded-[2.5rem] p-8 border border-white/5 relative overflow-hidden text-center shadow-2xl">
+            <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-blue-600/20 to-transparent"></div>
             
-            <h2 className="text-2xl font-bold text-white">{userProfile.displayName}</h2>
-            <p className="text-slate-400 text-sm">@{userProfile.username}</p>
+            <div className="relative z-10">
+                <div className="relative inline-block mb-5">
+                     <div className="w-32 h-32 rounded-full border-[6px] border-slate-900 overflow-hidden shadow-2xl mx-auto bg-slate-800 relative z-10">
+                        <img src={userProfile.avatarUrl} alt="Profile" className="w-full h-full object-cover" />
+                     </div>
+                     <div className="absolute -inset-1 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full blur-md opacity-70 z-0"></div>
+                     <button 
+                        onClick={triggerFileInput}
+                        className="absolute bottom-2 right-0 bg-white text-blue-900 p-2.5 rounded-full shadow-lg hover:scale-110 transition-transform z-20 border-4 border-slate-900"
+                     >
+                        <Camera size={16} />
+                     </button>
+                     <input 
+                        type="file" 
+                        ref={fileInputRef}
+                        onChange={handleAvatarUpload}
+                        className="hidden" 
+                        accept="image/*"
+                    />
+                </div>
+                
+                <h2 className="text-3xl font-extrabold text-white tracking-tight mb-1">{userProfile.displayName}</h2>
+                <div className="inline-block bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                    <p className="text-slate-400 text-xs font-mono">@{userProfile.username}</p>
+                </div>
+            </div>
         </div>
 
-        {/* Health Stats Grid */}
+        {/* Health Stats Grid - Clean Glass Look */}
         <div className="grid grid-cols-2 gap-4">
-            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                <p className="text-slate-400 text-xs uppercase font-bold mb-1">อายุ</p>
-                <p className="text-xl font-bold text-white">{userProfile.age} <span className="text-sm font-normal text-slate-500">ปี</span></p>
+            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
+                <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-2">Age</p>
+                <p className="text-3xl font-extrabold text-white">{userProfile.age} <span className="text-sm font-medium text-slate-500">y</span></p>
             </div>
-            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                <p className="text-slate-400 text-xs uppercase font-bold mb-1">น้ำหนัก</p>
+            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
+                <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-2">Weight</p>
                 <div className="flex items-baseline gap-1">
                     <input 
                         type="number" 
                         value={userProfile.weight} 
                         onChange={(e) => setUserProfile({...userProfile, weight: e.target.value})}
-                        className="bg-transparent w-16 text-xl font-bold text-white focus:outline-none border-b border-dashed border-slate-600 focus:border-blue-500"
+                        className="bg-transparent w-full text-3xl font-extrabold text-white focus:outline-none border-b border-white/10 focus:border-blue-500 transition-colors"
                     />
-                    <span className="text-sm font-normal text-slate-500">cm</span>
+                    <span className="text-sm font-medium text-slate-500">kg</span>
                 </div>
             </div>
-            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                <p className="text-slate-400 text-xs uppercase font-bold mb-1">ส่วนสูง</p>
+            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
+                <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-2">Height</p>
                 <div className="flex items-baseline gap-1">
                     <input 
                         type="number" 
                         value={userProfile.height} 
                         onChange={(e) => setUserProfile({...userProfile, height: e.target.value})}
-                        className="bg-transparent w-16 text-xl font-bold text-white focus:outline-none border-b border-dashed border-slate-600 focus:border-blue-500"
+                        className="bg-transparent w-full text-3xl font-extrabold text-white focus:outline-none border-b border-white/10 focus:border-blue-500 transition-colors"
                     />
-                    <span className="text-sm font-normal text-slate-500">cm</span>
+                    <span className="text-sm font-medium text-slate-500">cm</span>
                 </div>
             </div>
-            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                <p className="text-slate-400 text-xs uppercase font-bold mb-1">เพศ</p>
-                <p className="text-xl font-bold text-white">
-                    {userProfile.gender === 'male' ? 'ชาย' : 'หญิง'}
+            <div className="bg-white/5 p-5 rounded-3xl border border-white/5 backdrop-blur-sm">
+                <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-2">Gender</p>
+                <p className="text-2xl font-extrabold text-white">
+                    {userProfile.gender === 'male' ? 'Male' : 'Female'}
                 </p>
             </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
              {/* BMI Card */}
-             <div className="col-span-2 bg-gradient-to-r from-slate-800 to-slate-900 p-5 rounded-2xl border border-slate-700">
-                 <div className="flex justify-between items-start">
+             <div className="col-span-2 bg-gradient-to-r from-slate-900 to-slate-800 p-6 rounded-3xl border border-white/10 shadow-lg relative overflow-hidden">
+                 <div className="relative z-10 flex justify-between items-start">
                      <div>
-                         <p className="text-slate-400 text-xs uppercase font-bold tracking-wider mb-2">BMI (ดัชนีมวลกาย)</p>
-                         <h3 className="text-3xl font-bold text-white">{bmi.toFixed(1)}</h3>
+                         <p className="text-slate-400 text-xs uppercase font-bold tracking-widest mb-1">BMI Score</p>
+                         <h3 className="text-5xl font-extrabold text-white tracking-tighter">{bmi.toFixed(1)}</h3>
                      </div>
-                     <div className={`text-right ${bmiColor}`}>
-                         <div className="text-lg font-bold">{bmiCategory}</div>
+                     <div className={`px-4 py-2 rounded-2xl bg-black/30 backdrop-blur-md border border-white/5 ${bmiColor}`}>
+                         <div className="text-base font-bold">{bmiCategory}</div>
                      </div>
                  </div>
-                 <div className="w-full bg-slate-700 h-2 rounded-full mt-4 overflow-hidden">
+                 <div className="w-full bg-black/40 h-3 rounded-full mt-6 overflow-hidden border border-white/5">
                      <div 
                         className={`h-full transition-all duration-1000 ${
-                            bmi < 18.5 ? 'bg-blue-400' : 
-                            bmi < 23 ? 'bg-emerald-400' : 
-                            bmi < 25 ? 'bg-yellow-400' : 
-                            bmi < 30 ? 'bg-orange-400' : 'bg-red-400'
+                            bmi < 18.5 ? 'bg-blue-500' : 
+                            bmi < 23 ? 'bg-emerald-500' : 
+                            bmi < 25 ? 'bg-yellow-500' : 
+                            bmi < 30 ? 'bg-orange-500' : 'bg-red-500'
                         }`} 
                         style={{ width: `${Math.min(Math.max((bmi / 40) * 100, 5), 100)}%` }} 
                      />
@@ -1391,29 +1476,38 @@ const App: React.FC = () => {
              </div>
              
              {/* BMR & TDEE */}
-             <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                 <p className="text-slate-400 text-xs uppercase font-bold mb-1">BMR (เผาผลาญพื้นฐาน)</p>
-                 <p className="text-2xl font-bold text-emerald-400">{Math.round(bmr)} <span className="text-xs text-slate-500">kcal</span></p>
+             <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-3xl border border-white/5">
+                 <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3">
+                     <Flame size={18} />
+                 </div>
+                 <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-1">BMR</p>
+                 <p className="text-2xl font-extrabold text-white">{Math.round(bmr)}</p>
              </div>
-             <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                 <p className="text-slate-400 text-xs uppercase font-bold mb-1">TDEE (ใช้จริงต่อวัน)</p>
-                 <p className="text-2xl font-bold text-blue-400">{Math.round(tdee)} <span className="text-xs text-slate-500">kcal</span></p>
+             <div className="bg-slate-900/60 backdrop-blur-md p-5 rounded-3xl border border-white/5">
+                <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-400 mb-3">
+                     <Zap size={18} />
+                 </div>
+                 <p className="text-slate-500 text-[10px] uppercase font-bold tracking-wider mb-1">TDEE</p>
+                 <p className="text-2xl font-extrabold text-white">{Math.round(tdee)}</p>
              </div>
         </div>
         
-        <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700">
-            <label className="text-xs font-medium text-slate-400 ml-1">ระดับกิจกรรม (แก้ไขได้)</label>
-            <select 
-                value={userProfile.activityLevel}
-                onChange={(e) => setUserProfile({...userProfile, activityLevel: e.target.value as ActivityLevel})}
-                className="w-full bg-slate-800 border border-slate-600 text-white rounded-lg px-3 py-3 mt-2 outline-none"
-            >
-                <option value="sedentary">ไม่ออกกำลังกาย (Sedentary)</option>
-                <option value="light">ออกเล็กน้อย 1-3 วัน/สัปดาห์</option>
-                <option value="moderate">ปานกลาง 3-5 วัน/สัปดาห์</option>
-                <option value="active">หนัก 6-7 วัน/สัปดาห์</option>
-                <option value="very_active">หนักมาก (นักกีฬา)</option>
-            </select>
+        <div className="bg-white/5 p-6 rounded-3xl border border-white/5">
+            <label className="text-xs font-bold text-slate-400 ml-1 uppercase tracking-wider block mb-2">Activity Level</label>
+            <div className="relative">
+                <select 
+                    value={userProfile.activityLevel}
+                    onChange={(e) => setUserProfile({...userProfile, activityLevel: e.target.value as ActivityLevel})}
+                    className="w-full bg-black/20 border border-white/10 text-white rounded-2xl px-4 py-4 outline-none appearance-none focus:border-blue-500 transition-colors"
+                >
+                    <option value="sedentary">ไม่ออกกำลังกาย (Sedentary)</option>
+                    <option value="light">ออกเล็กน้อย 1-3 วัน/สัปดาห์</option>
+                    <option value="moderate">ปานกลาง 3-5 วัน/สัปดาห์</option>
+                    <option value="active">หนัก 6-7 วัน/สัปดาห์</option>
+                    <option value="very_active">หนักมาก (นักกีฬา)</option>
+                </select>
+                <ArrowRight className="absolute right-4 top-1/2 -translate-y-1/2 rotate-90 text-slate-500 pointer-events-none" size={16} />
+            </div>
         </div>
 
         <button 
@@ -1423,7 +1517,7 @@ const App: React.FC = () => {
                 setUserProfile(EMPTY_PROFILE);
                 setHistory([]);
             }}
-            className="w-full py-4 text-red-400 bg-red-500/10 border border-red-500/20 hover:bg-red-500/20 rounded-xl font-bold transition-colors"
+            className="w-full py-4 text-red-400 bg-red-500/5 hover:bg-red-500/10 border border-red-500/20 rounded-2xl font-bold transition-all active:scale-95"
         >
             ออกจากระบบ
         </button>
@@ -1431,38 +1525,55 @@ const App: React.FC = () => {
     );
   };
 
+  const Zap = ({ size }: { size: number }) => (
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width={size} 
+      height={size} 
+      viewBox="0 0 24 24" 
+      fill="none" 
+      stroke="currentColor" 
+      strokeWidth="2" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+    >
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+    </svg>
+  );
+
   // --- Main Render Logic ---
 
   if (!isLoggedIn) {
       return renderAuthScreen();
   }
 
-  // Header Logic
-  // Show header if we are NOT in active workout view.
-  // Active workout view happens when view === 'home' AND currentSession is not null.
   const isWorkoutActiveView = view === 'home' && currentSession !== null;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 font-sans pb-20 max-w-md mx-auto shadow-2xl overflow-hidden relative selection:bg-blue-500/30">
-      {/* Header */}
+    <div className="min-h-screen bg-transparent text-slate-200 font-sans max-w-md mx-auto relative selection:bg-blue-500/30">
+      
+      {/* Header - Glassmorphism Sticky */}
       {!isWorkoutActiveView && (
-          <header className="p-6 pb-2 flex justify-between items-center bg-slate-950 sticky top-0 z-40">
-            <div>
-              <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-400 tracking-tighter">
-                REPx <span className="text-xs font-medium text-slate-500 tracking-normal block -mt-1">By FUUYARP</span>
+          <header className="px-6 py-4 flex justify-between items-center sticky top-0 z-40 bg-[#020617]/80 backdrop-blur-xl border-b border-white/5">
+            <div className="flex items-center gap-2">
+              <div className="bg-blue-600 p-1.5 rounded-lg">
+                  <Dumbbell size={16} className="text-white" />
+              </div>
+              <h1 className="text-xl font-extrabold tracking-tighter text-white">
+                REPx <span className="text-blue-500">.</span>
               </h1>
             </div>
             <button 
                 onClick={() => setIsCoachOpen(true)}
-                className="w-10 h-10 bg-slate-800 rounded-full flex items-center justify-center text-blue-400 border border-slate-700 shadow-lg shadow-blue-900/10 active:scale-95 transition-all"
+                className="w-10 h-10 bg-white/5 hover:bg-white/10 rounded-xl flex items-center justify-center text-blue-400 border border-white/5 transition-all shadow-lg active:scale-95"
             >
-                <Bot size={20} />
+                <Bot size={22} />
             </button>
           </header>
       )}
 
       {/* Main Content Area */}
-      <main className="p-6 pt-4">
+      <main className="p-6 pt-6 min-h-[calc(100vh-100px)]">
         {view === 'challenges' ? (
             renderChallenges()
         ) : view === 'history' ? (
@@ -1470,41 +1581,40 @@ const App: React.FC = () => {
         ) : view === 'profile' ? (
             renderProfile()
         ) : (
-            // view === 'home'
             currentSession ? renderWorkout() : renderHome()
         )}
       </main>
 
-      {/* Bottom Navigation - Always Visible */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-slate-900/90 backdrop-blur-lg border-t border-slate-800 p-2 z-50 max-w-md mx-auto">
-        <div className="flex justify-around items-center">
+      {/* Floating Bottom Navigation */}
+      <nav className="fixed bottom-6 left-6 right-6 z-50 max-w-[calc(28rem-3rem)] mx-auto">
+        <div className="bg-slate-950/80 backdrop-blur-xl border border-white/10 p-2 rounded-[2rem] shadow-2xl flex justify-between items-center px-6">
           <button
             onClick={() => { setView('home'); setViewingSession(null); }}
-            className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${view === 'home' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`p-3 rounded-2xl flex flex-col items-center gap-1 transition-all duration-300 relative ${view === 'home' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
           >
-            <Dumbbell size={24} />
-            <span className="text-[10px] font-bold">{currentSession ? 'กำลังฝึก' : 'ฝึกซ้อม'}</span>
+            <Dumbbell size={24} strokeWidth={view === 'home' ? 2.5 : 2} />
+            {view === 'home' && <span className="absolute -bottom-1 w-1 h-1 bg-blue-500 rounded-full"></span>}
           </button>
           <button
             onClick={() => { setView('challenges'); setViewingSession(null); }}
-            className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${view === 'challenges' ? 'text-yellow-400 bg-yellow-500/10' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`p-3 rounded-2xl flex flex-col items-center gap-1 transition-all duration-300 relative ${view === 'challenges' ? 'text-yellow-400 bg-yellow-500/10' : 'text-slate-500 hover:text-slate-300'}`}
           >
-            <Trophy size={24} />
-            <span className="text-[10px] font-bold">ถ้วยรางวัล</span>
+            <Trophy size={24} strokeWidth={view === 'challenges' ? 2.5 : 2} />
+            {view === 'challenges' && <span className="absolute -bottom-1 w-1 h-1 bg-yellow-500 rounded-full"></span>}
           </button>
           <button
             onClick={() => { setView('history'); setViewingSession(null); }}
-            className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${view === 'history' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`p-3 rounded-2xl flex flex-col items-center gap-1 transition-all duration-300 relative ${view === 'history' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
           >
-            <Calendar size={24} />
-            <span className="text-[10px] font-bold">ประวัติ</span>
+            <BarChart3 size={24} strokeWidth={view === 'history' ? 2.5 : 2} />
+            {view === 'history' && <span className="absolute -bottom-1 w-1 h-1 bg-blue-500 rounded-full"></span>}
           </button>
           <button
             onClick={() => { setView('profile'); setViewingSession(null); }}
-            className={`p-3 rounded-xl flex flex-col items-center gap-1 transition-all ${view === 'profile' ? 'text-blue-400 bg-blue-500/10' : 'text-slate-500 hover:text-slate-300'}`}
+            className={`p-3 rounded-2xl flex flex-col items-center gap-1 transition-all duration-300 relative ${view === 'profile' ? 'text-purple-400 bg-purple-500/10' : 'text-slate-500 hover:text-slate-300'}`}
           >
-            <User size={24} />
-            <span className="text-[10px] font-bold">โปรไฟล์</span>
+            <User size={24} strokeWidth={view === 'profile' ? 2.5 : 2} />
+            {view === 'profile' && <span className="absolute -bottom-1 w-1 h-1 bg-purple-500 rounded-full"></span>}
           </button>
         </div>
       </nav>

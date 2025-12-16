@@ -27,7 +27,9 @@ import {
   List,
   BarChart3,
   LogOut,
-  Edit2
+  Edit2,
+  CheckCircle2,
+  Cloud
 } from 'lucide-react';
 import { 
   UserProfile, 
@@ -78,6 +80,9 @@ const App: React.FC = () => {
   const [view, setView] = useState<'home' | 'profile' | 'history' | 'challenges'>('home');
   const [quote, setQuote] = useState(MOTIVATIONAL_QUOTES[0]);
   
+  // Auto-Save Status State
+  const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | null>(null);
+
   // History State
   const [history, setHistory] = useState<WorkoutSession[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
@@ -119,6 +124,54 @@ const App: React.FC = () => {
       fetchHistory();
     }
   }, [isLoggedIn]);
+
+  // Restore Draft Session & Auto-Save Logic
+  useEffect(() => {
+    if (isLoggedIn && userProfile.username) {
+        const savedKey = `repx_session_${userProfile.username}`;
+        
+        // Restore only if currently no session and we are at home
+        if (!currentSession && view === 'home') {
+            const savedData = localStorage.getItem(savedKey);
+            if (savedData) {
+                try {
+                    const parsed = JSON.parse(savedData);
+                    // Check if it's a valid active session
+                    if (parsed && parsed.status === 'active' && Array.isArray(parsed.exercises)) {
+                        console.log("Restoring saved session...");
+                        setCurrentSession(parsed);
+                    }
+                } catch (e) {
+                    console.error("Failed to restore session", e);
+                    localStorage.removeItem(savedKey);
+                }
+            }
+        }
+    }
+  }, [isLoggedIn, userProfile.username]);
+
+  // Save changes to localStorage whenever currentSession updates
+  useEffect(() => {
+      if (!isLoggedIn || !userProfile.username) return;
+
+      const savedKey = `repx_session_${userProfile.username}`;
+
+      if (currentSession) {
+          setSaveStatus('saving');
+          localStorage.setItem(savedKey, JSON.stringify(currentSession));
+          
+          // Add a small delay to show the "saving" state and then "saved"
+          const timer = setTimeout(() => {
+              setSaveStatus('saved');
+          }, 800);
+          return () => clearTimeout(timer);
+      } else {
+          // If session is cleared (completed or cancelled), remove from storage
+          localStorage.removeItem(savedKey);
+          setSaveStatus(null);
+      }
+  }, [currentSession, isLoggedIn, userProfile.username]);
+
 
   const fetchHistory = async () => {
     if (!userProfile.username) return;
@@ -378,7 +431,7 @@ const App: React.FC = () => {
           });
       }
 
-      setCurrentSession(null);
+      setCurrentSession(null); // This will trigger useEffect to clear localStorage
       setView('history');
   };
 
@@ -473,9 +526,10 @@ const App: React.FC = () => {
           targetReps: '10',
           sets: createSets(3)
       };
+      // Insert at the beginning of the list
       setCurrentSession({
           ...currentSession,
-          exercises: [...currentSession.exercises, newExercise]
+          exercises: [newExercise, ...currentSession.exercises]
       });
       setSelectedSuggestion('');
   };
@@ -850,9 +904,32 @@ const App: React.FC = () => {
        'from-purple-500 to-fuchsia-600';
 
     return (
-      <div className="space-y-6 pb-28 animate-in fade-in slide-in-from-bottom-8 duration-500">
+      <div className="space-y-6 pb-28 animate-in fade-in slide-in-from-bottom-8 duration-500 relative">
+        {/* Auto-save Status Indicator */}
+        <div className="absolute -top-2 left-0 right-0 flex justify-center pointer-events-none z-10">
+             <div className={`
+                flex items-center gap-1.5 px-3 py-1.5 rounded-full 
+                bg-slate-900/90 backdrop-blur-md border border-white/10 shadow-xl
+                text-[10px] font-bold uppercase tracking-wider transition-all duration-500
+                ${saveStatus ? 'translate-y-0 opacity-100' : '-translate-y-4 opacity-0'}
+                ${saveStatus === 'saved' ? 'text-emerald-400 border-emerald-500/20' : 'text-blue-400 border-blue-500/20'}
+             `}>
+                {saveStatus === 'saved' ? (
+                    <>
+                        <CheckCircle2 size={12} className="text-emerald-500" />
+                        <span>บันทึกเรียบร้อย</span>
+                    </>
+                ) : (
+                    <>
+                        <Loader2 size={12} className="animate-spin text-blue-500" />
+                        <span>กำลังบันทึก...</span>
+                    </>
+                )}
+             </div>
+        </div>
+
         {/* Header Bar */}
-        <div className="flex justify-between items-center mb-2">
+        <div className="flex justify-between items-center mb-2 pt-4">
             <button 
                 onClick={endWorkout}
                 className="bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white px-4 py-2 rounded-xl flex items-center gap-2 text-sm font-semibold transition-colors border border-white/5"

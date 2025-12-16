@@ -28,8 +28,7 @@ import {
   BarChart3,
   LogOut,
   Edit2,
-  CheckCircle2,
-  Cloud
+  CheckCircle2
 } from 'lucide-react';
 import { 
   UserProfile, 
